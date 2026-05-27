@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Greek Kustoms — Send Us Your Design</title>
+<style>
+  :root {
+    --green: #1B7A3E;
+    --gold:  #C9A227;
+    --text:  #1a1a1a;
+    --muted: #666;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #0d3320 0%, #1B7A3E 50%, #0d3320 100%);
+    color: #fff;
+  }
+  .kiosk-wrap {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 30px;
+    text-align: center;
+  }
+  .wordmark {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(40px, 7vw, 84px);
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin: 0 0 4px;
+    line-height: 1;
+  }
+  .wordmark .dot { color: var(--gold); }
+  .tagline {
+    font-size: clamp(16px, 2.5vw, 24px);
+    font-weight: 400;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin: 0 0 50px;
+  }
+  .qr-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 36px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    max-width: 500px;
+    width: 100%;
+  }
+  .qr-card h2 {
+    color: var(--text);
+    font-size: clamp(20px, 3vw, 28px);
+    margin: 0 0 6px;
+    font-weight: 700;
+  }
+  .qr-card p {
+    color: var(--muted);
+    font-size: clamp(13px, 1.6vw, 16px);
+    margin: 0 0 24px;
+    line-height: 1.4;
+  }
+  #qrContainer {
+    background: #fff;
+    padding: 8px;
+    border-radius: 12px;
+  }
+  #qrContainer img {
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .qr-hint {
+    color: var(--text);
+    font-size: clamp(14px, 1.8vw, 18px);
+    font-weight: 600;
+    margin-top: 20px;
+  }
+  .qr-hint .icon {
+    font-size: 28px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .footer-mark {
+    margin-top: 40px;
+    color: rgba(255,255,255,0.6);
+    font-size: clamp(11px, 1.4vw, 14px);
+  }
+</style>
+</head>
+<body>
+
+<div class="kiosk-wrap">
+  <h1 class="wordmark">GREEK KUSTOMS<span class="dot">.</span></h1>
+  <div class="tagline">Custom Apparel · Embroidery · Print</div>
+
+  <div class="qr-card">
+    <h2>Send Us Your Design</h2>
+    <p>Scan this QR code with your phone to upload your logo or artwork. We'll review and contact you.</p>
+    <div id="qrContainer"></div>
+    <div class="qr-hint"><span class="icon">📱</span>Open your camera and point at the code</div>
+  </div>
+
+  <div class="footer-mark">Made with care in Atlanta, GA</div>
+</div>
+
+<!-- QR code generator (small, ~10KB) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+// Build the submission URL based on where this page lives. Adjust the base
+// path if your kiosk.html and submit.html are in different folders.
+function buildSubmitUrl() {
+  const base = window.location.origin + window.location.pathname.replace(/kiosk\.html.*$/, '');
+  return base + 'submit.html';
+}
+
+// Render the QR code with the submit URL
+(function renderQr() {
+  const url = buildSubmitUrl();
+  const container = document.getElementById('qrContainer');
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  container.innerHTML = qr.createImgTag(8, 8);  // cell 8px, margin 8 modules
+})();
+
+// Prevent screen sleep on mobile/tablet browsers that support Wake Lock API.
+// Kiosks should stay awake displaying the QR code.
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      await navigator.wakeLock.request('screen');
+    } catch (err) { /* not granted, ignore */ }
+  }
+}
+requestWakeLock();
+// Re-request wake lock if user taps the screen (mobile browsers drop it after some events)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+</script>
+
+</body>
+</html>
