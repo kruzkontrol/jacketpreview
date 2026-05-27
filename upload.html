@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Upload Logo — Greek Kustoms</title>
+<style>
+  :root {
+    --green: #1B7A3E;
+    --line: #e5e5e5;
+    --text: #1a1a1a;
+    --muted: #666;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%);
+    min-height: 100vh;
+    padding: 24px 18px;
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 20px;
+    padding: 28px 24px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 8px;
+  }
+  .session-pill {
+    display: inline-block;
+    background: #f0f4f0;
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  .upload-zone {
+    border: 2px dashed var(--line);
+    border-radius: 14px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--green);
+    background: #f5fbf7;
+  }
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+  .upload-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .upload-hint {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .btn {
+    display: inline-block;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    padding: 14px 22px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 16px;
+  }
+  .btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  .preview {
+    margin-top: 20px;
+    text-align: center;
+  }
+  .preview img {
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+  .status {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 14px;
+  }
+  .status.info    { background: #f0f4f8; color: var(--muted); }
+  .status.success { background: #e6f4ea; color: var(--green); font-weight: 600; }
+  .status.error   { background: #fdecea; color: #c62828; }
+  .small {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>📱 Upload Your Logo</h1>
+  <div class="session-pill" id="sessionPill">Session: ------</div>
+
+  <p style="color:var(--muted); font-size:14px; margin:0 0 18px;">
+    Pick a photo from your phone or take a new one. It'll show up on the kiosk screen instantly.
+  </p>
+
+  <label class="upload-zone" id="uploadZone" for="fileInput">
+    <div class="upload-icon">📷</div>
+    <div class="upload-title">Tap to choose a logo</div>
+    <div class="upload-hint">PNG, JPG, or SVG — up to 1MB</div>
+  </label>
+  <input type="file" id="fileInput" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" />
+
+  <div class="preview" id="preview" style="display:none;">
+    <img id="previewImg" alt="logo preview" />
+    <button class="btn" id="sendBtn" onclick="sendToKiosk()">Send to Kiosk →</button>
+  </div>
+
+  <div class="status info" id="status" style="display:none;"></div>
+
+  <p class="small">Greek Kustoms · Your image is sent only to your kiosk session and auto-deleted afterward.</p>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrRBimKqaMmLCOBnXfW-304yMntZ91Y5Q",
+    authDomain: "greek-kustoms-uploads.firebaseapp.com",
+    projectId: "greek-kustoms-uploads",
+    storageBucket: "greek-kustoms-uploads.firebasestorage.app",
+    messagingSenderId: "389551908449",
+    appId: "1:389551908449:web:8ff2708be36112d1116c20"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window.fbDb = db;
+  window.fbDoc = doc;
+  window.fbSetDoc = setDoc;
+  window.fbGetDoc = getDoc;
+  window.fbTimestamp = serverTimestamp;
+</script>
+
+<script>
+// Read session code from URL ?session=XXXXXX
+const urlParams = new URLSearchParams(window.location.search);
+const sessionCode = (urlParams.get('session') || '').toUpperCase();
+let selectedFile = null;
+let selectedDataUrl = null;
+
+if (sessionCode) {
+  document.getElementById('sessionPill').textContent = 'Session: ' + sessionCode;
+} else {
+  showStatus('error', 'No session code in URL. Please re-scan the QR code from the kiosk.');
+  document.getElementById('uploadZone').style.opacity = '0.4';
+  document.getElementById('uploadZone').style.pointerEvents = 'none';
+}
+
+// File picker handling
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    showStatus('error', 'File too large. Max 1MB.');
+    return;
+  }
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    selectedDataUrl = ev.target.result;
+    document.getElementById('previewImg').src = selectedDataUrl;
+    document.getElementById('preview').style.display = 'block';
+    showStatus('info', 'Logo selected. Tap "Send to Kiosk" to send.');
+  };
+  reader.readAsDataURL(file);
+});
+
+// Send the selected image to Firestore so the kiosk receives it
+async function sendToKiosk() {
+  if (!selectedDataUrl || !sessionCode) return;
+  if (!window.fbDb) {
+    showStatus('error', 'Connection not ready. Please refresh and try again.');
+    return;
+  }
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.textContent = '📤 Sending...';
+  try {
+    const ref = window.fbDoc(window.fbDb, 'uploads', sessionCode);
+    // First, verify the session exists (kiosk created the placeholder doc)
+    const existing = await window.fbGetDoc(ref);
+    if (!existing.exists()) {
+      showStatus('error', 'Session expired or invalid. Please re-scan the QR code from the kiosk.');
+      btn.disabled = false;
+      btn.textContent = 'Send to Kiosk →';
+      return;
+    }
+    // Write the upload payload
+    await window.fbSetDoc(ref, {
+      status: 'uploaded',
+      imageDataUrl: selectedDataUrl,
+      filename: selectedFile.name,
+      uploadedAt: window.fbTimestamp(),
+    });
+    showStatus('success', '✅ Logo sent! Check the kiosk screen — your image will appear there shortly.');
+    document.getElementById('preview').style.display = 'none';
+    document.getElementById('uploadZone').style.display = 'none';
+  } catch (err) {
+    console.error('Upload failed:', err);
+    showStatus('error', 'Upload failed. Please check your internet connection and try again.');
+    btn.disabled = false;
+    btn.textContent = 'Send to Kiosk →';
+  }
+}
+window.sendToKiosk = sendToKiosk;
+
+function showStatus(kind, message) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + kind;
+  el.textContent = message;
+  el.style.display = 'block';
+}
+</script>
+
+</body>
+</html>
