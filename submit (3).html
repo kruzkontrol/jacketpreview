@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Send Your Design — Greek Kustoms</title>
+<style>
+  :root {
+    --green: #1B7A3E;
+    --gold:  #C9A227;
+    --line:  #e5e5e5;
+    --text:  #1a1a1a;
+    --muted: #666;
+    --err:   #c62828;
+    --ok:    #1B7A3E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(180deg, #f5f5f5 0%, #fafafa 100%);
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .header h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--green);
+    margin: 0 0 4px;
+    letter-spacing: -0.5px;
+  }
+  .header h1 .dot { color: var(--gold); }
+  .header p {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  }
+  h2 {
+    font-size: 20px;
+    margin: 0 0 6px;
+  }
+  .intro {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 24px;
+    line-height: 1.5;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 18px 0 6px;
+  }
+  label .req { color: var(--err); }
+  input[type="text"],
+  input[type="email"],
+  textarea {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--green);
+  }
+  textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  .upload-zone {
+    margin-top: 6px;
+    border: 2px dashed var(--line);
+    border-radius: 14px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .upload-zone:hover {
+    border-color: var(--green);
+    background: #f5fbf7;
+  }
+  .upload-icon { font-size: 40px; margin-bottom: 8px; }
+  .upload-title { font-size: 15px; font-weight: 600; }
+  .upload-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .preview {
+    margin-top: 10px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #f5fbf7;
+    border-radius: 10px;
+  }
+  .preview img {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+  }
+  .preview .filename {
+    flex: 1;
+    font-size: 13px;
+    color: var(--muted);
+    word-break: break-all;
+  }
+  .preview button.remove {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--err);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .btn {
+    width: 100%;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 24px;
+    letter-spacing: 0.5px;
+  }
+  .btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  .status {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 14px;
+    display: none;
+  }
+  .status.info    { background: #f0f4f8; color: var(--muted); display: block; }
+  .status.success { background: #e6f4ea; color: var(--ok); font-weight: 600; display: block; }
+  .status.error   { background: #fdecea; color: var(--err); display: block; }
+  .success-screen {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-screen .check {
+    font-size: 64px;
+    color: var(--green);
+    margin-bottom: 12px;
+  }
+  .success-screen h2 {
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .footer-note {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 24px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <h1>GREEK KUSTOMS<span class="dot">.</span></h1>
+    <p>Custom Apparel · Atlanta, GA</p>
+  </div>
+
+  <div class="card" id="formCard">
+    <h2>Send Your Design</h2>
+    <p class="intro">Upload your logo or artwork and we'll get back to you with a quote.</p>
+
+    <label>Your Name <span class="req">*</span></label>
+    <input type="text" id="custName" placeholder="First and last name" autocomplete="name" />
+
+    <label>Your Email <span class="req">*</span></label>
+    <input type="email" id="custEmail" placeholder="you@example.com" autocomplete="email" />
+
+    <label>Your Message <span class="req">*</span></label>
+    <textarea id="custMessage" placeholder="Tell us about your project — what item, quantity, colors, deadline, etc."></textarea>
+
+    <label>Upload Your Logo / Design <span class="req">*</span></label>
+    <label class="upload-zone" for="fileInput">
+      <div class="upload-icon">📷</div>
+      <div class="upload-title">Tap to choose a file</div>
+      <div class="upload-hint">PNG, JPG, PDF, SVG — up to 5MB</div>
+    </label>
+    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/svg+xml,application/pdf" style="display:none;" />
+
+    <div class="preview" id="preview">
+      <img id="previewImg" alt="preview" />
+      <div class="filename" id="filename"></div>
+      <button class="remove" onclick="removeFile()">Remove</button>
+    </div>
+
+    <button class="btn" id="submitBtn" onclick="submitForm()">Send to Greek Kustoms →</button>
+
+    <div class="status" id="status"></div>
+
+    <p class="footer-note">
+      Your information is sent only to Greek Kustoms.
+      We'll reply by email within 1 business day.
+    </p>
+  </div>
+
+  <div class="card success-screen" id="successCard" style="display:none;">
+    <div class="check">✓</div>
+    <h2>Submission Received!</h2>
+    <p style="color: var(--muted);">
+      Thanks <span id="successName">friend</span> — we got your design and we'll be in touch by email soon.
+    </p>
+    <p style="font-size: 13px; color: var(--muted); margin-top: 24px;">
+      You can close this page.
+    </p>
+  </div>
+</div>
+
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import {
+    getFirestore, doc, setDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrRBimKqaMmLCOBnXfW-304yMntZ91Y5Q",
+    authDomain: "greek-kustoms-uploads.firebaseapp.com",
+    projectId: "greek-kustoms-uploads",
+    storageBucket: "greek-kustoms-uploads.firebasestorage.app",
+    messagingSenderId: "389551908449",
+    appId: "1:389551908449:web:8ff2708be36112d1116c20"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window.fbDb        = db;
+  window.fbDoc       = doc;
+  window.fbSetDoc    = setDoc;
+  window.fbTimestamp = serverTimestamp;
+</script>
+
+<script>
+// ---------------- Configuration ----------------
+const EMAIL_CONFIG = {
+  publicKey:  'O62TfCxdynaz91B1K',
+  serviceId:  'service_4idnquh',
+  templateId: 'template_vx83bze',   // Reuse existing template for now
+  shopEmails: ['kaneworkkanes@yahoo.com', 'greekkustoms@gmail.com'],
+};
+
+let selectedFile = null;
+let fullSizeDataUrl = null;   // Original file as data URL (goes to Firestore)
+let thumbnailDataUrl = null;  // Shrunk version (goes in email body)
+
+// Init EmailJS
+if (typeof emailjs !== 'undefined') {
+  emailjs.init({ publicKey: EMAIL_CONFIG.publicKey });
+}
+
+// ---------------- File upload handling ----------------
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  // 5MB cap on the raw file
+  if (file.size > 5 * 1024 * 1024) {
+    showStatus('error', 'File too large. Maximum 5MB.');
+    return;
+  }
+  selectedFile = file;
+  // Read full-size as data URL
+  fullSizeDataUrl = await fileToDataUrl(file);
+  // Generate a small thumbnail for email embedding (only for raster images;
+  // PDFs and SVGs we'll just show a placeholder thumbnail in the email).
+  // Keep thumbnail SMALL (300px / quality 0.7) — EmailJS template variables
+  // have a payload limit and big base64 strings cause [object Object] errors.
+  if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+    thumbnailDataUrl = await resizeImage(fullSizeDataUrl, 300, 0.7);
+  } else {
+    // Non-raster files (PDF, SVG): no thumbnail
+    thumbnailDataUrl = null;
+  }
+  // Show preview
+  document.getElementById('previewImg').src = thumbnailDataUrl || fullSizeDataUrl;
+  document.getElementById('filename').textContent =
+    `${file.name} (${(file.size/1024).toFixed(0)} KB)`;
+  document.getElementById('preview').style.display = 'flex';
+});
+
+function removeFile() {
+  selectedFile = null;
+  fullSizeDataUrl = null;
+  thumbnailDataUrl = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('preview').style.display = 'none';
+}
+
+// Read a File into a data URL (base64)
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// Resize an image data URL to maxWidth, returning new data URL (JPEG quality 0.85)
+function resizeImage(dataUrl, maxWidth, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);  // fallback to original
+    img.src = dataUrl;
+  });
+}
+
+// ---------------- Form submission ----------------
+async function submitForm() {
+  const name    = document.getElementById('custName').value.trim();
+  const email   = document.getElementById('custEmail').value.trim();
+  const message = document.getElementById('custMessage').value.trim();
+
+  // Validate
+  if (!name) { showStatus('error', 'Please enter your name.'); return; }
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    showStatus('error', 'Please enter a valid email address.'); return;
+  }
+  if (!message) { showStatus('error', 'Please tell us about your project.'); return; }
+  if (!selectedFile) { showStatus('error', 'Please upload a logo or design file.'); return; }
+  if (!window.fbDb) { showStatus('error', 'Connection not ready, please try again.'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '📤 Sending...';
+  showStatus('info', 'Uploading your design...');
+
+  try {
+    // Generate a submission ID (timestamp + random)
+    const submissionId = generateSubmissionId();
+
+    // Step 1: Upload full-size to Firestore
+    const ref = window.fbDoc(window.fbDb, 'submissions', submissionId);
+    await window.fbSetDoc(ref, {
+      name:           name,
+      email:          email,
+      message:        message,
+      filename:       selectedFile.name,
+      fileType:       selectedFile.type,
+      fileSizeBytes:  selectedFile.size,
+      fullSizeDataUrl: fullSizeDataUrl,
+      createdAt:      window.fbTimestamp(),
+    });
+
+    // Step 2: Build viewable link for shop to access full-size
+    //   We'll use a simple data-URL approach: a viewer page that fetches the
+    //   doc and shows the image. For now, link to a generic viewer URL.
+    const viewerUrl = window.location.origin + window.location.pathname.replace(/submit\.html.*$/, '') + 'view-submission.html?id=' + submissionId;
+
+    // Step 3: Send email via EmailJS to all shop addresses
+    showStatus('info', 'Sending notification to Greek Kustoms...');
+
+    // NOTE: Embedding the thumbnail directly in the email body causes
+    // EmailJS to fail with payload-size errors (their template variables
+    // can't handle large base64 strings). So we DON'T embed the thumbnail
+    // — instead we send a short text email with the viewer link, and the
+    // shop owner clicks through to see the full-size image in their browser.
+    const emailBody = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width:600px; margin:0 auto; color:#1a1a1a;">
+        <h2 style="color:#1B7A3E; border-bottom:2px solid #1B7A3E; padding-bottom:8px;">📷 New Design Submission</h2>
+
+        <table style="width:100%; margin:16px 0; border-collapse:collapse;">
+          <tr><td style="padding:6px 0; color:#666; width:120px;">From:</td><td style="padding:6px 0;"><strong>${escapeHtml(name)}</strong></td></tr>
+          <tr><td style="padding:6px 0; color:#666;">Email:</td><td style="padding:6px 0;"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></td></tr>
+          <tr><td style="padding:6px 0; color:#666;">File:</td><td style="padding:6px 0;">${escapeHtml(selectedFile.name)} (${(selectedFile.size/1024).toFixed(0)} KB)</td></tr>
+        </table>
+
+        <h3 style="color:#1B7A3E; font-size:14px; text-transform:uppercase; letter-spacing:1px;">Message</h3>
+        <div style="background:#f5f5f5; padding:14px; border-radius:8px; white-space:pre-wrap;">${escapeHtml(message)}</div>
+
+        <p style="margin:24px 0 0; text-align:center;">
+          <a href="${viewerUrl}" style="display:inline-block; background:#1B7A3E; color:#fff; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:600; font-size:16px;">📷 View Logo &amp; Download File →</a>
+        </p>
+
+        <p style="font-size:11px; color:#999; margin-top:32px; border-top:1px solid #eee; padding-top:16px;">
+          Submission ID: ${submissionId}<br>
+          Received via Greek Kustoms Kiosk
+        </p>
+      </div>
+    `;
+
+    // EmailJS template uses these param names. Reusing the customizer's template
+    // so {{design_details}} contains our whole HTML body, {{customer_name}} is the customer.
+    const baseParams = {
+      shop_email:    EMAIL_CONFIG.shopEmails[0],
+      customer_name: name,
+      customer_phone: '',
+      design_number: submissionId,
+      design_details: emailBody,
+      mockup_html:   '',  // Empty — we don't embed the image in the email
+      reply_to:      email,
+    };
+
+    // Send to each shop recipient
+    for (const recipient of EMAIL_CONFIG.shopEmails) {
+      await emailjs.send(EMAIL_CONFIG.serviceId, EMAIL_CONFIG.templateId, {
+        ...baseParams,
+        to_email: recipient,
+      });
+    }
+
+    // Optionally also send confirmation to the customer (commented out for now —
+    // some customers see it as spam; reach out manually for first impression)
+    // await emailjs.send(EMAIL_CONFIG.serviceId, EMAIL_CONFIG.templateId, {
+    //   ...baseParams,
+    //   to_email: email,
+    // });
+
+    // Show success screen
+    document.getElementById('successName').textContent = name.split(' ')[0] || 'friend';
+    document.getElementById('formCard').style.display = 'none';
+    document.getElementById('successCard').style.display = 'block';
+    window.scrollTo(0, 0);
+
+  } catch (err) {
+    console.error('Submit failed:', err);
+    btn.disabled = false;
+    btn.textContent = 'Send to Greek Kustoms →';
+    // Properly stringify error objects (EmailJS returns {status, text} not Error)
+    let msg = '';
+    if (err && typeof err === 'object') {
+      if (err.text)        msg = err.text;
+      else if (err.message) msg = err.message;
+      else if (err.status)  msg = `EmailJS error ${err.status}: ${JSON.stringify(err)}`;
+      else                  msg = JSON.stringify(err);
+    } else {
+      msg = String(err);
+    }
+    showStatus('error', 'Submission failed: ' + msg);
+  }
+}
+window.submitForm = submitForm;
+window.removeFile = removeFile;
+
+function showStatus(kind, msg) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + kind;
+  el.textContent = msg;
+}
+
+// Short random ID: timestamp-suffix-random
+function generateSubmissionId() {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `SUB-${ts}-${rand}`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+</script>
+
+</body>
+</html>
