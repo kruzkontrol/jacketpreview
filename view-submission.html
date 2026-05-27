@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>View Submission — Greek Kustoms</title>
+<style>
+  :root {
+    --green: #1B7A3E;
+    --line: #e5e5e5;
+    --muted: #666;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding: 20px;
+    color: #1a1a1a;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .header {
+    background: var(--green);
+    color: #fff;
+    padding: 20px 24px;
+    border-radius: 12px 12px 0 0;
+  }
+  .header h1 {
+    margin: 0;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+  }
+  .header .sub { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .card {
+    background: #fff;
+    border-radius: 0 0 12px 12px;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  }
+  .meta-row {
+    display: flex;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-label {
+    color: var(--muted);
+    font-size: 13px;
+    width: 130px;
+    flex-shrink: 0;
+  }
+  .meta-value {
+    font-size: 14px;
+    word-break: break-word;
+    flex: 1;
+  }
+  .meta-value.message {
+    white-space: pre-wrap;
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  .image-section {
+    margin-top: 24px;
+    text-align: center;
+    background: #fafafa;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .image-section img {
+    max-width: 100%;
+    max-height: 600px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .download-btn {
+    display: inline-block;
+    background: var(--green);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    margin-top: 16px;
+  }
+  .loading, .error {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .error { color: #c62828; }
+  .non-image {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .non-image .icon { font-size: 64px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <h1>Greek Kustoms — Submission Viewer</h1>
+    <div class="sub" id="subId">Loading...</div>
+  </div>
+  <div class="card" id="content">
+    <div class="loading">Loading submission...</div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import {
+    getFirestore, doc, getDoc
+  } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrRBimKqaMmLCOBnXfW-304yMntZ91Y5Q",
+    authDomain: "greek-kustoms-uploads.firebaseapp.com",
+    projectId: "greek-kustoms-uploads",
+    storageBucket: "greek-kustoms-uploads.firebasestorage.app",
+    messagingSenderId: "389551908449",
+    appId: "1:389551908449:web:8ff2708be36112d1116c20"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+
+  if (!id) {
+    showError('No submission ID in URL.');
+  } else {
+    document.getElementById('subId').textContent = id;
+    try {
+      const ref = doc(db, 'submissions', id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        showError('Submission not found. It may have been deleted or expired.');
+      } else {
+        renderSubmission(snap.data());
+      }
+    } catch (err) {
+      console.error(err);
+      showError('Failed to load: ' + err.message);
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('content').innerHTML = `<div class="error">${msg}</div>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function renderSubmission(data) {
+    const isImage = data.fileType && data.fileType.startsWith('image/');
+    const date = data.createdAt && data.createdAt.toDate
+      ? data.createdAt.toDate().toLocaleString()
+      : 'unknown';
+
+    let imageBlock;
+    if (isImage) {
+      imageBlock = `
+        <div class="image-section">
+          <img src="${data.fullSizeDataUrl}" alt="${escapeHtml(data.filename)}" />
+          <div>
+            <a class="download-btn" href="${data.fullSizeDataUrl}" download="${escapeHtml(data.filename)}">
+              ⬇ Download Original
+            </a>
+          </div>
+        </div>
+      `;
+    } else {
+      imageBlock = `
+        <div class="non-image">
+          <div class="icon">📎</div>
+          <p>Non-image file (${escapeHtml(data.fileType || 'unknown type')})</p>
+          <a class="download-btn" href="${data.fullSizeDataUrl}" download="${escapeHtml(data.filename)}">
+            ⬇ Download File
+          </a>
+        </div>
+      `;
+    }
+
+    document.getElementById('content').innerHTML = `
+      <div class="meta-row">
+        <div class="meta-label">From</div>
+        <div class="meta-value"><strong>${escapeHtml(data.name)}</strong></div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Email</div>
+        <div class="meta-value"><a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></div>
+      </div>
+      ${data.method ? `
+      <div class="meta-row">
+        <div class="meta-label">Method</div>
+        <div class="meta-value"><strong>${escapeHtml(data.method)}</strong></div>
+      </div>` : ''}
+      ${data.items ? `
+      <div class="meta-row">
+        <div class="meta-label">Item Type</div>
+        <div class="meta-value">${escapeHtml(data.items)}</div>
+      </div>` : ''}
+      <div class="meta-row">
+        <div class="meta-label">File</div>
+        <div class="meta-value">${escapeHtml(data.filename)} (${((data.fileSizeBytes || 0)/1024).toFixed(0)} KB)</div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Received</div>
+        <div class="meta-value">${date}</div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Message</div>
+        <div class="meta-value message">${escapeHtml(data.message || '')}</div>
+      </div>
+      ${imageBlock}
+    `;
+  }
+</script>
+
+</body>
+</html>
