@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Send Your Design — Greek Kustoms</title>
+<style>
+  :root {
+    --green: #1B7A3E;
+    --gold:  #C9A227;
+    --line:  #e5e5e5;
+    --text:  #1a1a1a;
+    --muted: #666;
+    --err:   #c62828;
+    --ok:    #1B7A3E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(180deg, #f5f5f5 0%, #fafafa 100%);
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .header h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--green);
+    margin: 0 0 4px;
+    letter-spacing: -0.5px;
+  }
+  .header h1 .dot { color: var(--gold); }
+  .header p {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  }
+  h2 {
+    font-size: 20px;
+    margin: 0 0 6px;
+  }
+  .intro {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 24px;
+    line-height: 1.5;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 18px 0 6px;
+  }
+  label .req { color: var(--err); }
+  input[type="text"],
+  input[type="email"],
+  textarea {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--green);
+  }
+  textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  /* Option pill chips for radio/checkbox groups */
+  .option-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .opt-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+    background: #fff;
+    margin: 0;
+    font-weight: 500;
+  }
+  .opt-pill:hover {
+    border-color: var(--green);
+    background: #f5fbf7;
+  }
+  .opt-pill input { margin: 0; accent-color: var(--green); }
+  .opt-pill:has(input:checked) {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+    font-weight: 600;
+  }
+  .upload-zone {
+    margin-top: 6px;
+    border: 2px dashed var(--line);
+    border-radius: 14px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .upload-zone:hover {
+    border-color: var(--green);
+    background: #f5fbf7;
+  }
+  /* Slight visual change when already at the max files allowed (3) — the
+     upload-zone label gets hidden via JS and replaced with a "limit reached"
+     hint. We keep the styling consistent so the customer knows why. */
+  .upload-zone.at-limit {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .upload-icon { font-size: 40px; margin-bottom: 8px; }
+  .upload-title { font-size: 15px; font-weight: 600; }
+  .upload-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  /* List of attached files — supports up to 3. Each row has its own preview
+     thumbnail, filename, and Remove button. Replaces the single .preview from
+     the old version. */
+  .file-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: #f5fbf7;
+    border-radius: 10px;
+    border: 1px solid #d9eae0;
+  }
+  .file-row img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .file-row .file-icon {
+    width: 60px;
+    height: 60px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .file-row .file-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .file-row .filename {
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-all;
+    font-weight: 600;
+  }
+  .file-row .filemeta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .file-row button.remove {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--err);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .file-row button.remove:hover {
+    background: #fdecea;
+  }
+  .file-count-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: center;
+  }
+  .btn {
+    width: 100%;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 24px;
+    letter-spacing: 0.5px;
+  }
+  .btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  .status {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 14px;
+    display: none;
+  }
+  .status.info    { background: #f0f4f8; color: var(--muted); display: block; }
+  .status.success { background: #e6f4ea; color: var(--ok); font-weight: 600; display: block; }
+  .status.error   { background: #fdecea; color: var(--err); display: block; }
+  .success-screen {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-screen .check {
+    font-size: 64px;
+    color: var(--green);
+    margin-bottom: 12px;
+  }
+  .success-screen h2 {
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .footer-note {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 24px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>GREEK KUSTOMS<span class="dot">.</span></h1>
+    <p>Custom Apparel · Atlanta, GA</p>
+  </div>
+  <div class="card" id="formCard">
+    <h2>Send Your Design</h2>
+    <p class="intro">Upload your logo or artwork (up to 3 files) and we'll get back to you with a quote.</p>
+    <label>Your Name <span class="req">*</span></label>
+    <input type="text" id="custName" placeholder="First and last name" autocomplete="name" />
+    <label>Your Email <span class="req">*</span></label>
+    <input type="email" id="custEmail" placeholder="you@example.com" autocomplete="email" />
+    <label>Your Message <span class="req">*</span></label>
+    <textarea id="custMessage" placeholder="Tell us about your project — quantity, colors, deadline, etc."></textarea>
+    <label>Decoration Method <span class="req">*</span></label>
+    <div class="option-grid">
+      <label class="opt-pill"><input type="radio" name="method" value="Printing"   /><span>Printing</span></label>
+      <label class="opt-pill"><input type="radio" name="method" value="Embroidery" /><span>Embroidery</span></label>
+      <label class="opt-pill"><input type="radio" name="method" value="DTF"        /><span>DTF</span></label>
+    </div>
+    <label>Item Type <span class="req">*</span> <small style="font-weight:400; color:var(--muted);">(pick all that apply)</small></label>
+    <div class="option-grid">
+      <label class="opt-pill"><input type="checkbox" name="item" value="Shirt"    /><span>Shirt</span></label>
+      <label class="opt-pill"><input type="checkbox" name="item" value="Polo"     /><span>Polo</span></label>
+      <label class="opt-pill"><input type="checkbox" name="item" value="Hoodie"   /><span>Hoodie</span></label>
+      <label class="opt-pill"><input type="checkbox" name="item" value="Jacket"   /><span>Jacket</span></label>
+      <label class="opt-pill"><input type="checkbox" name="item" value="Other" id="itemOtherCheck" /><span>Other</span></label>
+    </div>
+    <input type="text" id="itemOtherText" placeholder="What other item? (e.g. hat, bag, towel...)"
+           style="margin-top:10px; display:none;" />
+    <label>Upload Your Logo / Design <span class="req">*</span> <small style="font-weight:400; color:var(--muted);">(up to 3 files)</small></label>
+    <label class="upload-zone" id="uploadZone" for="fileInput">
+      <div class="upload-icon">📷</div>
+      <div class="upload-title" id="uploadTitle">Tap to choose a file</div>
+      <div class="upload-hint">PNG, JPG, SVG, PDF — up to 15MB total across all files</div>
+    </label>
+    <!-- multiple attribute lets the customer pick more than one file at once;
+         our JS also enforces a max of 3. The accept list matches the original. -->
+    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/svg+xml,application/pdf" multiple style="display:none;" />
+    <!-- Stacked preview list — up to 3 rows, one per attached file. -->
+    <div class="file-list" id="fileList"></div>
+    <div class="file-count-hint" id="fileCountHint" style="display:none;"></div>
+    <button class="btn" id="submitBtn" onclick="submitForm()">Send to Greek Kustoms →</button>
+    <div class="status" id="status"></div>
+    <p class="footer-note">
+      Your information is sent only to Greek Kustoms.
+      We'll reply by email within 1 business day.
+    </p>
+  </div>
+  <div class="card success-screen" id="successCard" style="display:none;">
+    <div class="check">✓</div>
+    <h2>Submission Received!</h2>
+    <p style="color: var(--muted);">
+      Thanks <span id="successName">friend</span> — we got your design and we'll be in touch by email soon.
+    </p>
+    <p style="font-size: 13px; color: var(--muted); margin-top: 24px;">
+      You can close this page.
+    </p>
+  </div>
+</div>
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  // We need: doc (build a doc ref), setDoc (write data), serverTimestamp.
+  // For multi-file submissions we save each file as its OWN sub-document
+  // under submissions/{id}/files/{n} so we don't blow past Firestore's
+  // 1 MB per-document limit when there are 2 or 3 images.
+  import {
+    getFirestore, doc, setDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrRBimKqaMmLCOBnXfW-304yMntZ91Y5Q",
+    authDomain: "greek-kustoms-uploads.firebaseapp.com",
+    projectId: "greek-kustoms-uploads",
+    storageBucket: "greek-kustoms-uploads.firebasestorage.app",
+    messagingSenderId: "389551908449",
+    appId: "1:389551908449:web:8ff2708be36112d1116c20"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window.fbDb        = db;
+  window.fbDoc       = doc;
+  window.fbSetDoc    = setDoc;
+  window.fbTimestamp = serverTimestamp;
+</script>
+<script>
+// ---------------- Configuration ----------------
+const EMAIL_CONFIG = {
+  publicKey:  'O62TfCxdynaz91B1K',
+  serviceId:  'service_4idnquh',
+  templateId: 'template_ln75blw',   // Kiosk Submission template
+  shopEmails: ['kaneworkkanes@yahoo.com', 'greekkustoms@gmail.com'],
+};
+
+// Maximum number of files the customer can attach. The HTML accepts more via
+// the OS file picker (since <input multiple>) but the JS handler caps it here.
+const MAX_FILES = 3;
+// Total upload cap (sum of all attached file sizes). The original single-file
+// version had a 15MB-per-file cap; now we keep the same total budget across
+// up to 3 files. So one big file or three small ones — either works.
+const MAX_TOTAL_BYTES = 15 * 1024 * 1024;
+
+// Holds up to MAX_FILES entries. Each entry: { file, fullSizeDataUrl, thumbnailDataUrl }
+// thumbnailDataUrl is only generated for raster images (used for preview thumbnail).
+// PDFs and SVGs show a placeholder icon instead.
+let selectedFiles = [];
+
+// Init EmailJS
+if (typeof emailjs !== 'undefined') {
+  emailjs.init({ publicKey: EMAIL_CONFIG.publicKey });
+}
+
+// Show/hide the "Other" text box when its checkbox toggles
+document.getElementById('itemOtherCheck').addEventListener('change', (e) => {
+  const txt = document.getElementById('itemOtherText');
+  txt.style.display = e.target.checked ? 'block' : 'none';
+  if (!e.target.checked) txt.value = '';
+});
+
+// ---------------- File upload handling ----------------
+// Customer picked one or more files from the OS picker. We cap at MAX_FILES
+// total and enforce the combined MAX_TOTAL_BYTES across whatever's already in
+// selectedFiles plus the newly picked ones. Anything over either limit is
+// rejected with a friendly message.
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const picked = Array.from(e.target.files || []);
+  if (picked.length === 0) return;
+
+  // Compute current total bytes already attached, plus how many slots remain
+  const currentBytes = selectedFiles.reduce((sum, f) => sum + f.file.size, 0);
+  const slotsLeft = MAX_FILES - selectedFiles.length;
+
+  if (slotsLeft <= 0) {
+    showStatus('error', `Maximum ${MAX_FILES} files. Remove one before adding more.`);
+    e.target.value = '';  // reset picker
+    return;
+  }
+
+  // Only take as many files as we have slots for; warn if customer picked too many
+  const filesToAdd = picked.slice(0, slotsLeft);
+  if (picked.length > slotsLeft) {
+    showStatus('error', `Only ${slotsLeft} more file(s) allowed — added the first ${slotsLeft}.`);
+  }
+
+  // Check total size budget
+  const incomingBytes = filesToAdd.reduce((sum, f) => sum + f.size, 0);
+  if (currentBytes + incomingBytes > MAX_TOTAL_BYTES) {
+    const mbCurrent = (currentBytes / 1024 / 1024).toFixed(1);
+    const mbIncoming = (incomingBytes / 1024 / 1024).toFixed(1);
+    showStatus(
+      'error',
+      `Total size exceeds 15MB. You already have ${mbCurrent}MB; adding ${mbIncoming}MB would push it over. Try smaller files.`
+    );
+    e.target.value = '';
+    return;
+  }
+
+  // Process each new file: read full-size data URL and generate a thumbnail
+  // (raster images only). PDFs and SVGs get null thumbnail and an icon preview.
+  for (const file of filesToAdd) {
+    const fullSizeDataUrl = await fileToDataUrl(file);
+    let thumbnailDataUrl = null;
+    if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+      thumbnailDataUrl = await resizeImage(fullSizeDataUrl, 300, 0.7);
+    }
+    selectedFiles.push({ file, fullSizeDataUrl, thumbnailDataUrl });
+  }
+
+  e.target.value = '';  // reset picker so the same file can be re-picked after removal
+  renderFileList();
+});
+
+// Render the list of attached files as separate preview rows. Each has its
+// own Remove button which calls removeFile(index).
+function renderFileList() {
+  const list = document.getElementById('fileList');
+  const hint = document.getElementById('fileCountHint');
+  const zone = document.getElementById('uploadZone');
+  const title = document.getElementById('uploadTitle');
+
+  list.innerHTML = '';
+  selectedFiles.forEach((entry, idx) => {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    const sizeKB = (entry.file.size / 1024).toFixed(0);
+    // Decide between image thumbnail and a generic icon based on file type
+    const isRaster = entry.file.type.startsWith('image/') && entry.file.type !== 'image/svg+xml';
+    const previewHtml = (isRaster && entry.thumbnailDataUrl)
+      ? `<img src="${entry.thumbnailDataUrl}" alt="preview ${idx + 1}" />`
+      : `<div class="file-icon">${entry.file.type === 'application/pdf' ? '📄' : '🖼️'}</div>`;
+    row.innerHTML = `
+      ${previewHtml}
+      <div class="file-info">
+        <div class="filename">${escapeHtml(entry.file.name)}</div>
+        <div class="filemeta">File ${idx + 1} of ${selectedFiles.length} • ${sizeKB} KB</div>
+      </div>
+      <button class="remove" onclick="removeFile(${idx})">Remove</button>
+    `;
+    list.appendChild(row);
+  });
+
+  // Show count hint + grey out upload zone when at the cap
+  if (selectedFiles.length > 0) {
+    const totalBytes = selectedFiles.reduce((sum, f) => sum + f.file.size, 0);
+    const totalKB = (totalBytes / 1024).toFixed(0);
+    const remaining = MAX_FILES - selectedFiles.length;
+    if (remaining > 0) {
+      hint.textContent = `${selectedFiles.length} of ${MAX_FILES} files attached (${totalKB} KB total) — you can add ${remaining} more`;
+      title.textContent = 'Tap to add another file';
+      zone.classList.remove('at-limit');
+    } else {
+      hint.textContent = `${MAX_FILES} of ${MAX_FILES} files attached (${totalKB} KB total) — maximum reached`;
+      title.textContent = 'Limit reached — remove a file to add another';
+      zone.classList.add('at-limit');
+    }
+    hint.style.display = 'block';
+  } else {
+    hint.style.display = 'none';
+    title.textContent = 'Tap to choose a file';
+    zone.classList.remove('at-limit');
+  }
+}
+
+// Remove a file at the given index from the selectedFiles array, then re-render.
+function removeFile(idx) {
+  selectedFiles.splice(idx, 1);
+  renderFileList();
+  // Clear any previous error status so the customer doesn't see a stale message
+  document.getElementById('status').className = 'status';
+  document.getElementById('status').textContent = '';
+}
+
+// Read a File into a data URL (base64)
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// Resize an image data URL to a target max width with given JPEG quality.
+// Returns the new data URL.
+function resizeImage(dataUrl, maxWidth, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);  // fallback to original
+    img.src = dataUrl;
+  });
+}
+
+// Auto-shrink an image data URL until its size is under the Firestore field
+// limit (~1 MB). Tries progressively smaller widths and lower JPEG quality.
+// Silent to the customer — they don't do anything; the phone handles it.
+// Returns the best-fitting data URL (or the smallest we could achieve).
+async function shrinkToFit(originalDataUrl, fileType) {
+  // Firestore single-field limit is 1,048,487 bytes. Stay under 950,000 to
+  // leave room for other fields in the same document.
+  const TARGET_BYTES = 950000;
+  // If file is non-raster (PDF, SVG), we can't resize it — return as-is.
+  if (!fileType || !fileType.startsWith('image/') || fileType === 'image/svg+xml') {
+    return originalDataUrl;
+  }
+  // Already fits? Done.
+  if (originalDataUrl.length < TARGET_BYTES) return originalDataUrl;
+  // Try progressively smaller widths + qualities until it fits.
+  // Order from largest/highest-quality to smallest. First fit wins.
+  const attempts = [
+    { width: 2400, quality: 0.9  },
+    { width: 2000, quality: 0.88 },
+    { width: 1800, quality: 0.85 },
+    { width: 1600, quality: 0.85 },
+    { width: 1400, quality: 0.82 },
+    { width: 1200, quality: 0.80 },
+    { width: 1000, quality: 0.78 },
+    { width:  900, quality: 0.75 },
+    { width:  800, quality: 0.72 },
+    { width:  700, quality: 0.70 },
+    { width:  600, quality: 0.68 },
+    { width:  500, quality: 0.65 },
+  ];
+  let result = originalDataUrl;
+  for (const a of attempts) {
+    const resized = await resizeImage(originalDataUrl, a.width, a.quality);
+    if (resized.length < TARGET_BYTES) {
+      console.log(`Image auto-resized to ${a.width}px @ q${a.quality} (${(resized.length/1024).toFixed(0)}KB)`);
+      return resized;
+    }
+    result = resized;  // keep the smallest so far as fallback
+  }
+  // Couldn't fit even at the smallest setting — return the smallest we got.
+  console.warn('Image could not be shrunk under 950KB; using smallest attempt.');
+  return result;
+}
+
+// ---------------- Form submission ----------------
+async function submitForm() {
+  const name    = document.getElementById('custName').value.trim();
+  const email   = document.getElementById('custEmail').value.trim();
+  const message = document.getElementById('custMessage').value.trim();
+  // Method: single radio value
+  const methodEl = document.querySelector('input[name="method"]:checked');
+  const method   = methodEl ? methodEl.value : '';
+  // Item types: multi checkbox values
+  const itemEls  = document.querySelectorAll('input[name="item"]:checked');
+  const items    = Array.from(itemEls).map(el => el.value);
+  const otherText = document.getElementById('itemOtherText').value.trim();
+  // If "Other" is checked, replace it with the typed text
+  const itemList = items.map(i => i === 'Other' ? (otherText || 'Other (not specified)') : i);
+  // Validate
+  if (!name) { showStatus('error', 'Please enter your name.'); return; }
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    showStatus('error', 'Please enter a valid email address.'); return;
+  }
+  if (!message) { showStatus('error', 'Please tell us about your project.'); return; }
+  if (!method)  { showStatus('error', 'Please choose a decoration method (Printing, Embroidery, or DTF).'); return; }
+  if (items.length === 0) { showStatus('error', 'Please select at least one item type.'); return; }
+  if (items.includes('Other') && !otherText) {
+    showStatus('error', 'Please describe what "Other" item you need.'); return;
+  }
+  // At least one file required (files 2 and 3 are optional, but customer must attach at least one)
+  if (selectedFiles.length === 0) {
+    showStatus('error', 'Please upload at least one logo or design file.'); return;
+  }
+  if (!window.fbDb) { showStatus('error', 'Connection not ready, please try again.'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '📤 Sending...';
+  showStatus('info', 'Optimizing your images...');
+
+  try {
+    // Generate a submission ID (timestamp + random)
+    const submissionId = generateSubmissionId();
+    const itemsJoined = itemList.join(', ');
+
+    // Step 1: For each file, auto-shrink (if raster) to fit Firestore's
+    // ~1MB single-field limit. The customer doesn't see this — they just see
+    // a single "Optimizing..." message while we process up to 3 files.
+    const uploadedFiles = [];
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const entry = selectedFiles[i];
+      const dataUrlForUpload = await shrinkToFit(entry.fullSizeDataUrl, entry.file.type);
+      uploadedFiles.push({
+        name:       entry.file.name,
+        type:       entry.file.type,
+        sizeBytes:  entry.file.size,
+        dataUrl:    dataUrlForUpload,
+      });
+    }
+
+    // Step 2: Save to Firestore. CRITICAL: Firestore has a 1 MB per-document
+    // limit. Two or three full-size data URLs in one doc easily blows past
+    // that. So we split the storage like this:
+    //
+    //   submissions/{id}                  <- MAIN doc: metadata only (no data URLs)
+    //   submissions/{id}/files/1          <- SUB-doc: file 1's data URL
+    //   submissions/{id}/files/2          <- SUB-doc: file 2's data URL (if present)
+    //   submissions/{id}/files/3          <- SUB-doc: file 3's data URL (if present)
+    //
+    // Each sub-doc holds ONE data URL, so we never exceed Firestore's limit.
+    // The viewer page reads the main doc + iterates the files sub-collection.
+    showStatus('info', 'Uploading your designs...');
+
+    // 2a) Write the main submission doc with metadata ONLY (no big data URLs)
+    const ref = window.fbDoc(window.fbDb, 'submissions', submissionId);
+    await window.fbSetDoc(ref, {
+      name:           name,
+      email:          email,
+      message:        message,
+      method:         method,
+      items:          itemsJoined,
+      fileCount:      uploadedFiles.length,
+      // Lightweight file metadata array (no data URLs here — those go in sub-docs)
+      filesMeta:      uploadedFiles.map(f => ({
+        name:      f.name,
+        type:      f.type,
+        sizeBytes: f.sizeBytes,
+      })),
+      createdAt:      window.fbTimestamp(),
+    });
+
+    // 2b) Write each file as its own sub-doc. The doc ID is the 1-indexed
+    // slot number ('1', '2', '3') for predictable, ordered access.
+    for (let i = 0; i < uploadedFiles.length; i++) {
+      const slotId = String(i + 1);  // '1', '2', '3'
+      const fileRef = window.fbDoc(window.fbDb, 'submissions', submissionId, 'files', slotId);
+      const f = uploadedFiles[i];
+      await window.fbSetDoc(fileRef, {
+        name:      f.name,
+        type:      f.type,
+        sizeBytes: f.sizeBytes,
+        dataUrl:   f.dataUrl,
+        slot:      i + 1,
+        createdAt: window.fbTimestamp(),
+      });
+    }
+
+    // Step 3: Build viewable link for shop to access full-size
+    const viewerUrl = window.location.origin + window.location.pathname.replace(/submit\.html.*$/, '') + 'view-submission.html?id=' + submissionId;
+
+    // Step 4: Send email via EmailJS to all shop addresses.
+    // The Kiosk Submission template (template_ln75blw) supports up to 3
+    // file_info fields: {{file_info}}, {{file_info_2}}, {{file_info_3}}.
+    // Files 2 and 3 are blank when not present so the template rows just appear empty.
+    showStatus('info', 'Sending notification to Greek Kustoms...');
+    const formatFileInfo = (entry) => `${entry.file.name} (${(entry.file.size/1024).toFixed(0)} KB)`;
+    const baseParams = {
+      customer_name:  name,
+      customer_email: email,
+      // file_info, file_info_2, file_info_3: human-readable file labels for the email body.
+      // Each is "filename (sizeKB)" or empty if the slot isn't used.
+      file_info:      selectedFiles[0] ? formatFileInfo(selectedFiles[0]) : '',
+      file_info_2:    selectedFiles[1] ? formatFileInfo(selectedFiles[1]) : '',
+      file_info_3:    selectedFiles[2] ? formatFileInfo(selectedFiles[2]) : '',
+      message:        message,
+      method:         method,
+      items:          itemsJoined,
+      viewer_url:     viewerUrl,
+      submission_id:  submissionId,
+      reply_to:       email,
+    };
+    // Send to each shop recipient (Yahoo + Gmail)
+    for (const recipient of EMAIL_CONFIG.shopEmails) {
+      await emailjs.send(EMAIL_CONFIG.serviceId, EMAIL_CONFIG.templateId, {
+        ...baseParams,
+        to_email: recipient,
+      });
+    }
+
+    // Show success screen
+    document.getElementById('successName').textContent = name.split(' ')[0] || 'friend';
+    document.getElementById('formCard').style.display = 'none';
+    document.getElementById('successCard').style.display = 'block';
+    window.scrollTo(0, 0);
+  } catch (err) {
+    console.error('Submit failed:', err);
+    btn.disabled = false;
+    btn.textContent = 'Send to Greek Kustoms →';
+    // Properly stringify error objects (EmailJS returns {status, text} not Error)
+    let msg = '';
+    if (err && typeof err === 'object') {
+      if (err.text)        msg = err.text;
+      else if (err.message) msg = err.message;
+      else if (err.status)  msg = `EmailJS error ${err.status}: ${JSON.stringify(err)}`;
+      else                  msg = JSON.stringify(err);
+    } else {
+      msg = String(err);
+    }
+    showStatus('error', 'Submission failed: ' + msg);
+  }
+}
+window.submitForm = submitForm;
+window.removeFile = removeFile;
+
+function showStatus(kind, msg) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + kind;
+  el.textContent = msg;
+}
+
+// Short random ID: timestamp-suffix-random
+function generateSubmissionId() {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `SUB-${ts}-${rand}`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+</script>
+</body>
+</html>
