@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>View Submission — Greek Kustoms</title>
+<style>
+  :root {
+    --green: #1B7A3E;
+    --line: #e5e5e5;
+    --muted: #666;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding: 20px;
+    color: #1a1a1a;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .header {
+    background: var(--green);
+    color: #fff;
+    padding: 20px 24px;
+    border-radius: 12px 12px 0 0;
+  }
+  .header h1 {
+    margin: 0;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px;
+  }
+  .header .sub { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .card {
+    background: #fff;
+    border-radius: 0 0 12px 12px;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  }
+  .meta-row {
+    display: flex;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-label {
+    color: var(--muted);
+    font-size: 13px;
+    width: 130px;
+    flex-shrink: 0;
+  }
+  .meta-value {
+    font-size: 14px;
+    word-break: break-word;
+    flex: 1;
+  }
+  .meta-value.message {
+    white-space: pre-wrap;
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  /* Per-file section. With multi-file support, each attached file renders
+     its own block with a header ("File 1 of 3"), the image (if raster), a
+     download button, and basic file metadata. */
+  .file-block {
+    margin-top: 24px;
+    background: #fafafa;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .file-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .file-block-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .file-block-meta {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .file-image-wrap {
+    text-align: center;
+  }
+  .file-image-wrap img {
+    max-width: 100%;
+    max-height: 600px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .download-btn {
+    display: inline-block;
+    background: var(--green);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    margin-top: 16px;
+  }
+  .loading, .error {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .error { color: #c62828; }
+  .non-image {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .non-image .icon { font-size: 64px; }
+  /* Loading indicator for individual files (since each sub-doc loads
+     separately, we show progress while files come in). */
+  .file-loading {
+    text-align: center;
+    padding: 30px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>Greek Kustoms — Submission Viewer</h1>
+    <div class="sub" id="subId">Loading...</div>
+  </div>
+  <div class="card" id="content">
+    <div class="loading">Loading submission...</div>
+  </div>
+</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  // We need:
+  //   doc      — build a doc ref
+  //   getDoc   — read the main submission doc (metadata only)
+  //   collection / getDocs — read the files sub-collection (one doc per file)
+  import {
+    getFirestore, doc, getDoc, collection, getDocs, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrRBimKqaMmLCOBnXfW-304yMntZ91Y5Q",
+    authDomain: "greek-kustoms-uploads.firebaseapp.com",
+    projectId: "greek-kustoms-uploads",
+    storageBucket: "greek-kustoms-uploads.firebasestorage.app",
+    messagingSenderId: "389551908449",
+    appId: "1:389551908449:web:8ff2708be36112d1116c20"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+
+  if (!id) {
+    showError('No submission ID in URL.');
+  } else {
+    document.getElementById('subId').textContent = id;
+    try {
+      // Step 1: Read the main submission doc (metadata only, no big data URLs)
+      const ref = doc(db, 'submissions', id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        showError('Submission not found. It may have been deleted or expired.');
+      } else {
+        const submission = snap.data();
+        // Render the metadata immediately so the viewer doesn't feel stuck
+        // while we load each file sub-doc.
+        renderSubmissionMeta(submission);
+        // Step 2: Load files. Try the NEW sub-collection structure first
+        // (submissions/{id}/files/{slot}). If empty, fall back to the OLD
+        // single-field structure (data.fullSizeDataUrl on the main doc) so
+        // submissions made before the multi-file update still render.
+        await loadAndRenderFiles(id, submission);
+      }
+    } catch (err) {
+      console.error(err);
+      showError('Failed to load: ' + err.message);
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('content').innerHTML = `<div class="error">${msg}</div>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  // Render the metadata block (name, email, method, etc.) plus a placeholder
+  // for the files. Files are loaded separately and injected into #filesArea.
+  function renderSubmissionMeta(data) {
+    const date = data.createdAt && data.createdAt.toDate
+      ? data.createdAt.toDate().toLocaleString()
+      : 'unknown';
+    // Build a list of file names from filesMeta (new structure) or fall back
+    // to the legacy single filename field for old submissions.
+    let fileListText = '';
+    if (Array.isArray(data.filesMeta) && data.filesMeta.length > 0) {
+      fileListText = data.filesMeta
+        .map((f, i) => `File ${i + 1}: ${escapeHtml(f.name)} (${((f.sizeBytes || 0) / 1024).toFixed(0)} KB)`)
+        .join('<br>');
+    } else if (data.filename) {
+      fileListText = `${escapeHtml(data.filename)} (${((data.fileSizeBytes || 0) / 1024).toFixed(0)} KB)`;
+    } else {
+      fileListText = '(no files listed)';
+    }
+
+    document.getElementById('content').innerHTML = `
+      <div class="meta-row">
+        <div class="meta-label">From</div>
+        <div class="meta-value"><strong>${escapeHtml(data.name || '')}</strong></div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Email</div>
+        <div class="meta-value"><a href="mailto:${escapeHtml(data.email || '')}">${escapeHtml(data.email || '')}</a></div>
+      </div>
+      ${data.method ? `
+      <div class="meta-row">
+        <div class="meta-label">Method</div>
+        <div class="meta-value"><strong>${escapeHtml(data.method)}</strong></div>
+      </div>` : ''}
+      ${data.items ? `
+      <div class="meta-row">
+        <div class="meta-label">Item Type</div>
+        <div class="meta-value">${escapeHtml(data.items)}</div>
+      </div>` : ''}
+      <div class="meta-row">
+        <div class="meta-label">Files</div>
+        <div class="meta-value">${fileListText}</div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Received</div>
+        <div class="meta-value">${date}</div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Message</div>
+        <div class="meta-value message">${escapeHtml(data.message || '')}</div>
+      </div>
+      <div id="filesArea">
+        <div class="file-loading">Loading attached files...</div>
+      </div>
+    `;
+  }
+
+  // Read each file from the submissions/{id}/files sub-collection and render
+  // them in order. If no sub-docs exist, fall back to the old single-field
+  // shape on the main doc (back-compat for submissions made before multi-file).
+  async function loadAndRenderFiles(submissionId, mainData) {
+    const filesArea = document.getElementById('filesArea');
+    try {
+      const filesCol = collection(db, 'submissions', submissionId, 'files');
+      // Order by 'slot' so File 1 comes before File 2, etc.
+      const q = query(filesCol, orderBy('slot'));
+      const filesSnap = await getDocs(q);
+
+      if (!filesSnap.empty) {
+        // NEW: multi-file sub-collection found. Render each as its own block.
+        const fileBlocks = [];
+        filesSnap.forEach(docSnap => {
+          const f = docSnap.data();
+          fileBlocks.push(renderFileBlock(f, f.slot, filesSnap.size));
+        });
+        filesArea.innerHTML = fileBlocks.join('');
+        return;
+      }
+
+      // FALLBACK: old single-file submissions store the data URL directly
+      // on the main doc as fullSizeDataUrl. Render that as a single file.
+      if (mainData && mainData.fullSizeDataUrl) {
+        const legacyFile = {
+          name:      mainData.filename || 'submitted-file',
+          type:      mainData.fileType || 'application/octet-stream',
+          sizeBytes: mainData.fileSizeBytes || 0,
+          dataUrl:   mainData.fullSizeDataUrl,
+        };
+        filesArea.innerHTML = renderFileBlock(legacyFile, 1, 1);
+        return;
+      }
+
+      // Neither structure found — show a helpful empty state
+      filesArea.innerHTML = `
+        <div class="file-block">
+          <div class="non-image">
+            <div class="icon">📎</div>
+            <p>No files found for this submission.</p>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      console.error('Files load failed:', err);
+      filesArea.innerHTML = `
+        <div class="error">Failed to load files: ${escapeHtml(err.message)}</div>
+      `;
+    }
+  }
+
+  // Render ONE file's block. For raster images we show a big preview + download
+  // button. For PDFs/SVGs/other we show a generic icon + download link.
+  function renderFileBlock(f, slot, total) {
+    const isRaster = f.type && f.type.startsWith('image/') && f.type !== 'image/svg+xml';
+    const sizeKB = ((f.sizeBytes || 0) / 1024).toFixed(0);
+    // Download anchor — uses the data URL directly. Modern browsers will
+    // honor the download attribute and use f.name as the saved filename.
+    const downloadBtn = `
+      <a class="download-btn" href="${f.dataUrl}" download="${escapeHtml(f.name)}">
+        ⬇ Download Original
+      </a>
+    `;
+    const titleText = total > 1 ? `File ${slot} of ${total}` : 'Attached File';
+
+    let inner;
+    if (isRaster) {
+      inner = `
+        <div class="file-image-wrap">
+          <img src="${f.dataUrl}" alt="${escapeHtml(f.name)}" />
+          <div>${downloadBtn}</div>
+        </div>
+      `;
+    } else if (f.type === 'image/svg+xml') {
+      // SVGs can render inline too — use an <object> for accurate display
+      inner = `
+        <div class="file-image-wrap">
+          <img src="${f.dataUrl}" alt="${escapeHtml(f.name)}" style="background:#fff; padding:20px;" />
+          <div>${downloadBtn}</div>
+        </div>
+      `;
+    } else {
+      // PDFs and other non-image types — show generic icon + download
+      const icon = f.type === 'application/pdf' ? '📄' : '📎';
+      inner = `
+        <div class="non-image">
+          <div class="icon">${icon}</div>
+          <p>${escapeHtml(f.type || 'unknown type')}</p>
+          ${downloadBtn}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="file-block">
+        <div class="file-block-header">
+          <div class="file-block-title">${titleText}</div>
+          <div class="file-block-meta">${escapeHtml(f.name || '')} • ${sizeKB} KB</div>
+        </div>
+        ${inner}
+      </div>
+    `;
+  }
+</script>
+</body>
+</html>
