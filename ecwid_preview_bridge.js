@@ -15,7 +15,7 @@
 (function () {
   "use strict";
 
-  var KWP_DEBUG = false;
+  var KWP_DEBUG = true;
 
   // The preview's address. Change it here if the tunnel address ever
   // changes, and nowhere else.
