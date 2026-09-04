@@ -1,686 +1,2205 @@
-/* Kanework - feed the Ecwid product options into the jacket preview.
- *
- * Paste this into the Ecwid control panel under the store's custom
- * JavaScript. It watches the product option fields, and every time one
- * changes it sends the values to the preview iframe, which redraws.
- *
- * Nothing here changes what the customer's order says. The options are
- * still Ecwid's; this only shows them a picture of what they chose.
- *
- * If a field ever stops feeding through, set KWP_DEBUG to true below,
- * open the product page, and read the browser console: it prints every
- * option label it found and which preview field it matched, so a label
- * renamed in Ecwid shows up immediately instead of failing silently.
- */
+/* ============================================================
+   KANEWORK / GREEK KUSTOMS
+   ECWID LIVE JACKET PREVIEW BRIDGE
+
+   This script:
+   1. Detects an Ecwid PRODUCT page.
+   2. Creates the Live Design Preview automatically.
+   3. Loads https://tail261222.ts.net/
+   4. Reads the customer's Ecwid product options.
+   5. Sends those selections to the Python jacket preview.
+   6. Keeps working when Ecwid rebuilds the page dynamically.
+   ============================================================ */
+
 (function () {
-  "use strict";
+    "use strict";
 
-  var KWP_DEBUG = false;
+    var KWP_DEBUG = false;
 
-  // The preview's address. Change it here if the tunnel address ever
-  // changes, and nowhere else.
-  var PREVIEW_HOST = "tail261222.ts.net";
-  var PREVIEW_URL = "https://" + PREVIEW_HOST + "/";
+    /* =========================================================
+       PREVIEW SERVER
+       ========================================================= */
 
-  /* ---- which Ecwid option feeds which preview field ---------------
-   * The key is the option's LABEL as typed in Ecwid, normalised:
-   * upper case, punctuation turned into spaces, runs collapsed. So
-   * "SHIP (BOTTOM OF JACKET)" is written here as
-   * "SHIP BOTTOM OF JACKET".
-   *
-   * Rename an option in Ecwid and you must rename it here too.
-   */
-  var FIELDS = {
-    "LINE NAME": "line",
-    "LINE NUMBER": "number",
-    "SHIP BOTTOM OF JACKET": "ship",
-    "CHAPTER": "chapter",
-    "CROSSING SEASON": "crossing",
-    "NECK LETTERING": "neck",
-    "JACKET COLOR": "jacket",
-    "LETTER COLOR": "letter",
-    "OUTLINE COLOR": "outline",
-    "LINE NUMBER COLOR": "number_color",
-    "OUTLINE NUMBER": "number_outline",
-    "ORGANIZATION LETTER ON FRONT": "front_org",
-    "WORDING THRU LETTERS": "wording",
-    "ADD NAME UNDER CREST": "crest_name_on",
-    "NAME UNDER CREST": "crest_name",
-    // A tee's printed name is sized by the SHIRT size.
-    "SIZE": "size",
-    // Duffle bags. The front text may name an organisation, in which
-    // case its three Greek letters go on, or be any wording at all.
-    "FREE NO CHARGE ORGANAZATION WORDING ON FRONT POCKET": "front_text",
-    "ORGANAZATION WORDING ON FRONT POCKET": "front_text",
-    "DO YOU WANT WORDING UNDER GREEK LETTERS": "crest_name_on",
-    "CUSTOM WORDING UNDER": "crest_name",
-    "ADD CREST SHIELD TO TOP OF BAG": "crest_on",
-    // Satin and camo jackets - the crest is an optional add-on there
-    // too. Ecwid may label it a few ways; all map to the same field.
-    "ADD CREST SHIELD": "crest_on",
-    "CREST SHIELD": "crest_on",
-    "ADD CREST": "crest_on",
-    "CREST": "crest_on",
-  };
+    var PREVIEW_HOST = "tail261222.ts.net";
+    var PREVIEW_URL = "https://" + PREVIEW_HOST + "/";
 
-  // An organisation's code is its name with everything but the letters
-  // taken out - "ZETA PHI BETA" becomes ZETAPHIBETA, which is what the
-  // artwork folder calls it. Worked out rather than listed, so an org
-  // added to the store works without editing this file; the list here
-  // was written with eight of the nine in it and Phi Beta Sigma
-  // silently drew nothing.
-  //
-  // The result still has to BE one of the orgs we hold artwork for -
-  // ORG_FALLBACK below has all nine - so "OTHER (TYPE BELOW)" and
-  // anything unrecognised come back as NONE and draw no Greek and no
-  // crest, which is the intended answer for a custom organisation.
-  function orgCode(raw) {
-    var code = String(raw === null || raw === undefined ? "" : raw)
-      .toUpperCase().replace(/[^A-Z]/g, "");
-    return Object.prototype.hasOwnProperty.call(ORG_FALLBACK, code)
-      ? code : "NONE";
-  }
+    var PREVIEW_BOX_ID = "kanework-preview-box";
+    var PREVIEW_FRAME_ID = "kanework-preview-frame";
 
-  // Which of those are colours, so their values get checked.
-  var COLOUR_FIELDS = {
-    jacket: 1, letter: 1, outline: 1,
-    number_color: 1, number_outline: 1
-  };
 
-  // Store names for a colour the preview knows under another name.
-  // CREAM, TAN and KHAKI are one colour in the shop.
-  var COLOUR_ALIAS = {
-    "CREAM": "KHAKI",
-    "TAN": "KHAKI",
-    "GRAY": "GREY",
-    "ROYAL BLUE": "BLUE",
-    "ROYAL": "BLUE"
-  };
+    /* =========================================================
+       ECWID OPTION LABEL -> PREVIEW FIELD
+       ========================================================= */
 
-  // Values that are not a colour at all. These are NOT sent, so the
-  // preview holds whatever it was showing - an out-of-date jacket
-  // rather than a wrong one.
-  var NOT_A_COLOUR = {
-    "": 1,
-    "PLEASE CHOOSE": 1,
-    "PLEASE SELECT": 1,
-    "CHOOSE": 1,
-    "OTHER": 1,
-    "OTHER TYPE BELOW": 1
-  };
+    var FIELDS = {
 
-  // NONE is NOT in that list. It is a real answer - no outline at all -
-  // and the preview draws it. It only means anything on the two outline
-  // dropdowns, so it is not passed on from any other field.
-  var OUTLINE_FIELDS = { outline: 1, number_outline: 1 };
+        "LINE NAME": "line",
+        "LINE NUMBER": "number",
+        "SHIP BOTTOM OF JACKET": "ship",
+        "CHAPTER": "chapter",
+        "CROSSING SEASON": "crossing",
+        "NECK LETTERING": "neck",
 
-  // The four the preview can recommend a colour for. The line number
-  // takes the same pair as the lettering - one order, one look.
-  var AUTO_FIELDS = { letter: 1, outline: 1,
-                      number_color: 1, number_outline: 1 };
+        "JACKET COLOR": "jacket",
+        "LETTER COLOR": "letter",
+        "OUTLINE COLOR": "outline",
 
-  // "Nothing chosen yet" - as opposed to OTHER, which IS a choice, just
-  // not one with a colour attached.
-  var NOT_CHOSEN = { "": 1, "PLEASE CHOOSE": 1, "PLEASE SELECT": 1,
-                     "CHOOSE": 1 };
+        "LINE NUMBER COLOR": "number_color",
+        "OUTLINE NUMBER": "number_outline",
 
-  /* ---- what each org sews on each jacket ---------------------------
-   * The same table the preview uses, and the same one the customizer
-   * shows as its approved combos. It lives here as well because THIS is
-   * the copy that fills the store's own dropdowns, so the order carries
-   * the colours rather than only the picture showing them.
-   *
-   * "gold" is YELLOW for Sigma Gamma Rho and Iota Phi Theta; Alpha and
-   * Omega use OLD GOLD. Different threads, easy to confuse.
-   */
-  var APPROVED = {
-    ALPHAKAPPAALPHA: {
-      BLACK: ["GREEN", "PINK"], WHITE: ["PINK", "GREEN"],
-      PINK: ["PINK", "GREEN"], GREEN: ["GREEN", "PINK"],
-      KHAKI: ["PINK", "GREEN"], "HOT PINK": ["HOT PINK", "GREEN"]
-    },
-    DELTASIGMATHETA: {
-      BLACK: ["RED", "WHITE"], WHITE: ["WHITE", "RED"],
-      RED: ["RED", "WHITE"], CRIMSON: ["CRIMSON", "KHAKI"],
-      KHAKI: ["RED", "WHITE"], MAROON: ["CRIMSON", "KHAKI"]
-    },
-    ZETAPHIBETA: {
-      BLACK: ["BLUE", "WHITE"], WHITE: ["WHITE", "BLUE"],
-      BLUE: ["BLUE", "WHITE"], KHAKI: ["BLUE", "WHITE"]
-    },
-    SIGMAGAMMARHO: {
-      WHITE: ["YELLOW", "BLUE"], BLACK: ["BLUE", "YELLOW"],
-      YELLOW: ["YELLOW", "BLUE"], BLUE: ["BLUE", "YELLOW"],
-      KHAKI: ["BLUE", "YELLOW"]
-    },
-    ALPHAPHIALPHA: {
-      BLACK: ["BLACK", "OLD GOLD"], WHITE: ["OLD GOLD", "BLACK"],
-      KHAKI: ["OLD GOLD", "BLACK"]
-    },
-    KAPPAALPHAPSI: {
-      WHITE: ["WHITE", "RED"], RED: ["RED", "WHITE"],
-      BLACK: ["RED", "WHITE"], CRIMSON: ["CRIMSON", "KHAKI"],
-      KHAKI: ["RED", "WHITE"], MAROON: ["CRIMSON", "KHAKI"]
-    },
-    OMEGAPSIPHI: { PURPLE: ["PURPLE", "OLD GOLD"] },
-    PHIBETASIGMA: {
-      WHITE: ["WHITE", "BLUE"], BLACK: ["BLUE", "WHITE"],
-      BLUE: ["BLUE", "WHITE"], KHAKI: ["BLUE", "WHITE"]
-    },
-    IOTAPHITHETA: {
-      BROWN: ["BROWN", "YELLOW"], YELLOW: ["YELLOW", "BROWN"],
-      KHAKI: ["YELLOW", "BROWN"]
-    }
-  };
+        "ORGANIZATION LETTER ON FRONT": "front_org",
 
-  // When an org has no combo for the jacket picked, its signature pair.
-  var ORG_FALLBACK = {
-    ALPHAKAPPAALPHA: ["PINK", "GREEN"],
-    DELTASIGMATHETA: ["WHITE", "RED"],
-    ZETAPHIBETA: ["WHITE", "BLUE"],
-    SIGMAGAMMARHO: ["YELLOW", "BLUE"],
-    ALPHAPHIALPHA: ["OLD GOLD", "BLACK"],
-    KAPPAALPHAPSI: ["WHITE", "CRIMSON"],
-    OMEGAPSIPHI: ["OLD GOLD", "PURPLE"],
-    PHIBETASIGMA: ["WHITE", "BLUE"],
-    IOTAPHITHETA: ["YELLOW", "BROWN"]
-  };
+        "WORDING THRU LETTERS": "wording",
 
-  // What a garment colour is, as a plain colour. The combos above are
-  // keyed on plain colours, while the dropdown now holds things like
-  // "TEE TRUE ROYAL" and "BLACK/WHITE" that match none of them.
-  var BASE_COLOUR = {
-    "ROYAL": "BLUE", "TRUE ROYAL": "BLUE", "CAROLINA BLUE": "BLUE",
-    "COOL BLUE": "BLUE", "COLUMBIA": "BLUE", "AQUA": "BLUE",
-    "KELLY": "GREEN", "SAGE": "GREEN", "MAIZE YELLOW": "YELLOW",
-    "CARDINAL": "CRIMSON", "FUCHSIA": "HOT PINK",
-    "TEAM PURPLE": "PURPLE", "NATURAL": "KHAKI", "TAN": "KHAKI",
-    "CREAM": "KHAKI", "ASH": "GREY", "GRAY": "GREY",
-    "WOODLAND": "KHAKI"
-  };
+        "ADD NAME UNDER CREST": "crest_name_on",
+        "NAME UNDER CREST": "crest_name",
 
-  var GARMENT_PREFIX = ["SATIN ", "TEE ", "DUFFLE ", "CAMO ", "HOODIE ",
-                        "SWEATSHIRT ", "CARDIGAN ", "POLO ", "STOLE "];
+        "SIZE": "size",
 
-  function baseColour(name) {
-    var text = String(name === null || name === undefined ? "" : name)
-      .trim().toUpperCase();
+        /* Duffle bag options */
 
-    // A satin jacket is named body/trim - the body carries the letters.
-    if (text.indexOf("/") !== -1) text = text.split("/")[0];
+        "FREE NO CHARGE ORGANAZATION WORDING ON FRONT POCKET":
+            "front_text",
 
-    for (var i = 0; i < GARMENT_PREFIX.length; i++) {
-      if (text.indexOf(GARMENT_PREFIX[i]) === 0) {
-        text = text.slice(GARMENT_PREFIX[i].length);
-        break;
-      }
-    }
+        "ORGANAZATION WORDING ON FRONT POCKET":
+            "front_text",
 
-    text = text.replace(/\s+/g, " ").trim();
+        "DO YOU WANT WORDING UNDER GREEK LETTERS":
+            "crest_name_on",
 
-    return BASE_COLOUR[text] || text;
-  }
+        "CUSTOM WORDING UNDER":
+            "crest_name",
 
-  function recommended(org, jacket) {
-    if (!org) return null;
-    var byJacket = APPROVED[org];
-    var plain = baseColour(jacket);
-    if (byJacket && byJacket[plain]) return byJacket[plain];
-    return ORG_FALLBACK[org] || null;
-  }
+        "ADD CREST SHIELD TO TOP OF BAG":
+            "crest_on",
 
-  function norm(s) {
-    return String(s === null || s === undefined ? "" : s)
-      .replace(/[\u2018\u2019\u201c\u201d]/g, "")
-      .replace(/[^A-Za-z0-9]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toUpperCase();
-  }
+        "ADD CREST SHIELD":
+            "crest_on",
 
-  // Colours are normalised the same way, but the SLASH is kept - it is
-  // what tells a satin "BLUE/WHITE" apart from a coach "BLUE". Stripping
-  // it (as norm does) turned every satin colour into "BLUE WHITE",
-  // which matched nothing and left the preview on the default coach
-  // jacket. Also drop any trailing price or note in brackets, e.g.
-  // "BLUE/WHITE (+$5.00)" -> "BLUE/WHITE".
-  function normColour(s) {
-    return String(s === null || s === undefined ? "" : s)
-      .replace(/[\u2018\u2019\u201c\u201d]/g, "")
-      .replace(/\([^)]*\)/g, " ")          // drop "(...)" price/notes
-      .replace(/[^A-Za-z0-9\/]+/g, " ")    // keep the slash
-      .replace(/\s*\/\s*/g, "/")           // tidy " / " -> "/"
-      .replace(/\s+/g, " ")
-      .trim()
-      .toUpperCase();
-  }
+        "CREST SHIELD":
+            "crest_on",
 
-  /* ---- finding an option's label ----------------------------------
-   * Ecwid gives the inputs generated ids, so the only stable handle on
-   * a field is the words the customer reads next to it. Several ways
-   * are tried in turn because the storefront's markup differs between
-   * text boxes, dropdowns and radio groups.
-   */
-  function textWithoutControls(node) {
-    var copy = node.cloneNode(true);
-    var junk = copy.querySelectorAll(
-      "input,select,textarea,option,button,script,style,img,svg");
-    for (var i = 0; i < junk.length; i++) {
-      if (junk[i].parentNode) junk[i].parentNode.removeChild(junk[i]);
-    }
-    return copy.textContent || "";
-  }
+        "ADD CREST":
+            "crest_on",
 
-  // Returns EVERY candidate label for a control, nearest first.
-  function labelFor(el) {
-    var out = [];
+        "CREST":
+            "crest_on"
+    };
 
-    // A <label for=...> is a CANDIDATE, not the answer. On a radio it
-    // names the button - "NO" - while the question it belongs to sits
-    // two levels above. Returning it and stopping is what made the
-    // radio groups invisible, so it goes on the list and the search
-    // carries on upwards.
-    if (el.id) {
-      var byFor = null;
-      try {
-        byFor = document.querySelector(
-          'label[for="' + el.id.replace(/"/g, '\\"') + '"]');
-      } catch (e) { byFor = null; }
-      if (byFor) out.push(norm(textWithoutControls(byFor)));
+
+    /* =========================================================
+       ORGANIZATION COLORS
+       ========================================================= */
+
+    var APPROVED = {
+
+        ALPHAKAPPAALPHA: {
+            BLACK: ["GREEN", "PINK"],
+            WHITE: ["PINK", "GREEN"],
+            PINK: ["PINK", "GREEN"],
+            GREEN: ["GREEN", "PINK"],
+            KHAKI: ["PINK", "GREEN"],
+            "HOT PINK": ["HOT PINK", "GREEN"]
+        },
+
+        DELTASIGMATHETA: {
+            BLACK: ["RED", "WHITE"],
+            WHITE: ["WHITE", "RED"],
+            RED: ["RED", "WHITE"],
+            CRIMSON: ["CRIMSON", "KHAKI"],
+            KHAKI: ["RED", "WHITE"],
+            MAROON: ["CRIMSON", "KHAKI"]
+        },
+
+        ZETAPHIBETA: {
+            BLACK: ["BLUE", "WHITE"],
+            WHITE: ["WHITE", "BLUE"],
+            BLUE: ["BLUE", "WHITE"],
+            KHAKI: ["BLUE", "WHITE"]
+        },
+
+        SIGMAGAMMARHO: {
+            WHITE: ["YELLOW", "BLUE"],
+            BLACK: ["BLUE", "YELLOW"],
+            YELLOW: ["YELLOW", "BLUE"],
+            BLUE: ["BLUE", "YELLOW"],
+            KHAKI: ["BLUE", "YELLOW"]
+        },
+
+        ALPHAPHIALPHA: {
+            BLACK: ["BLACK", "OLD GOLD"],
+            WHITE: ["OLD GOLD", "BLACK"],
+            KHAKI: ["OLD GOLD", "BLACK"]
+        },
+
+        KAPPAALPHAPSI: {
+            WHITE: ["WHITE", "RED"],
+            RED: ["RED", "WHITE"],
+            BLACK: ["RED", "WHITE"],
+            CRIMSON: ["CRIMSON", "KHAKI"],
+            KHAKI: ["RED", "WHITE"],
+            MAROON: ["CRIMSON", "KHAKI"]
+        },
+
+        OMEGAPSIPHI: {
+            PURPLE: ["PURPLE", "OLD GOLD"]
+        },
+
+        PHIBETASIGMA: {
+            WHITE: ["WHITE", "BLUE"],
+            BLACK: ["BLUE", "WHITE"],
+            BLUE: ["BLUE", "WHITE"],
+            KHAKI: ["BLUE", "WHITE"]
+        },
+
+        IOTAPHITHETA: {
+            BROWN: ["BROWN", "YELLOW"],
+            YELLOW: ["YELLOW", "BROWN"],
+            KHAKI: ["YELLOW", "BROWN"]
+        }
+    };
+
+
+    var ORG_FALLBACK = {
+
+        ALPHAKAPPAALPHA:
+            ["PINK", "GREEN"],
+
+        DELTASIGMATHETA:
+            ["WHITE", "RED"],
+
+        ZETAPHIBETA:
+            ["WHITE", "BLUE"],
+
+        SIGMAGAMMARHO:
+            ["YELLOW", "BLUE"],
+
+        ALPHAPHIALPHA:
+            ["OLD GOLD", "BLACK"],
+
+        KAPPAALPHAPSI:
+            ["WHITE", "CRIMSON"],
+
+        OMEGAPSIPHI:
+            ["OLD GOLD", "PURPLE"],
+
+        PHIBETASIGMA:
+            ["WHITE", "BLUE"],
+
+        IOTAPHITHETA:
+            ["YELLOW", "BROWN"]
+    };
+
+
+    /* =========================================================
+       ORGANIZATION NORMALIZATION
+       ========================================================= */
+
+    function orgCode(raw) {
+
+        var code = String(
+            raw === null ||
+            raw === undefined
+                ? ""
+                : raw
+        )
+        .toUpperCase()
+        .replace(/[^A-Z]/g, "");
+
+        return Object.prototype.hasOwnProperty.call(
+            ORG_FALLBACK,
+            code
+        )
+            ? code
+            : "NONE";
     }
 
-    var wrap = el.closest ? el.closest("label") : null;
-    if (wrap) out.push(norm(textWithoutControls(wrap)));
 
-    // EVERY level up, not just the first one with words in it. A radio
-    // group is why: each button's own label says "NO" or "YES", and the
-    // name of the question - "Wording thru Letters" - only appears one
-    // or two levels above that. Stopping at the first non-empty
-    // ancestor found "NO" and gave up.
-    var node = el.parentElement;
-    var hops = 0;
-    while (node && hops < 6) {
-      var text = norm(textWithoutControls(node));
-      if (text) out.push(text);
-      node = node.parentElement;
-      hops++;
-    }
-    return out;
-  }
+    /* =========================================================
+       COLOR SETTINGS
+       ========================================================= */
 
-  function matchLabel(label) {
-    if (!label) return null;
-    if (FIELDS[label]) return FIELDS[label];
+    var COLOUR_FIELDS = {
+        jacket: 1,
+        letter: 1,
+        outline: 1,
+        number_color: 1,
+        number_outline: 1
+    };
 
-    // The wrapper sometimes picks up a stray word or a price. Fall
-    // back to the LONGEST known label contained in the text, so
-    // "LINE NUMBER COLOR" is never mistaken for "LINE NUMBER".
-    if (label.length <= 60) {
-      var best = null;
-      for (var key in FIELDS) {
-        if (!Object.prototype.hasOwnProperty.call(FIELDS, key)) continue;
-        if (label.indexOf(key) === -1) continue;
-        if (best === null || key.length > best.length) best = key;
-      }
-      if (best) return FIELDS[best];
-    }
-    return null;
-  }
 
-  function fieldFor(el) {
-    var aria = el.getAttribute && el.getAttribute("aria-label");
-    if (aria) {
-      var byAria = matchLabel(norm(aria));
-      if (byAria) return byAria;
-    }
+    var AUTO_FIELDS = {
+        letter: 1,
+        outline: 1,
+        number_color: 1,
+        number_outline: 1
+    };
 
-    // Nearest level first, so the closest label wins over a wrapper
-    // that happens to contain several.
-    var levels = labelFor(el);
-    for (var i = 0; i < levels.length; i++) {
-      var hit = matchLabel(levels[i]);
-      if (hit) return hit;
-    }
-    return null;
-  }
 
-  /* ---- reading the current values ---------------------------------- */
+    var OUTLINE_FIELDS = {
+        outline: 1,
+        number_outline: 1
+    };
 
-  function valueOf(el) {
-    if (el.type === "radio") return el.checked ? el.value : null;
-    if (el.type === "checkbox") return el.checked ? el.value : null;
-    return el.value;
-  }
 
-  function collect() {
-    var values = {};
-    var els = document.querySelectorAll("input,select,textarea");
+    var COLOUR_ALIAS = {
 
-    for (var i = 0; i < els.length; i++) {
-      var el = els[i];
-      if (el.type === "hidden" || el.type === "file") continue;
+        "CREAM": "KHAKI",
+        "TAN": "KHAKI",
 
-      var field = fieldFor(el);
-      if (!field) continue;
+        "GRAY": "GREY",
 
-      var raw = valueOf(el);
-      if (raw === null) continue;
+        "ROYAL BLUE": "BLUE",
+        "ROYAL": "BLUE"
+    };
 
-      if (COLOUR_FIELDS[field]) {
-        var name = normColour(raw);
 
-        // Nothing chosen means "use what this organisation usually
-        // sews on this jacket" - AUTO - rather than holding whatever
-        // was showing before. The line number follows the lettering.
-        if (AUTO_FIELDS[field] && NOT_CHOSEN[name]) {
-          values[field] = "AUTO";
-          continue;
+    var NOT_A_COLOUR = {
+
+        "": 1,
+
+        "PLEASE CHOOSE": 1,
+        "PLEASE SELECT": 1,
+
+        "CHOOSE": 1,
+
+        "OTHER": 1,
+        "OTHER TYPE BELOW": 1
+    };
+
+
+    var NOT_CHOSEN = {
+
+        "": 1,
+
+        "PLEASE CHOOSE": 1,
+        "PLEASE SELECT": 1,
+
+        "CHOOSE": 1
+    };
+
+
+    /* =========================================================
+       GARMENT BASE COLOR
+       ========================================================= */
+
+    var BASE_COLOUR = {
+
+        "ROYAL": "BLUE",
+        "TRUE ROYAL": "BLUE",
+
+        "CAROLINA BLUE": "BLUE",
+        "COOL BLUE": "BLUE",
+        "COLUMBIA": "BLUE",
+        "AQUA": "BLUE",
+
+        "KELLY": "GREEN",
+        "SAGE": "GREEN",
+
+        "MAIZE YELLOW": "YELLOW",
+
+        "CARDINAL": "CRIMSON",
+
+        "FUCHSIA": "HOT PINK",
+
+        "TEAM PURPLE": "PURPLE",
+
+        "NATURAL": "KHAKI",
+        "TAN": "KHAKI",
+        "CREAM": "KHAKI",
+
+        "ASH": "GREY",
+        "GRAY": "GREY",
+
+        "WOODLAND": "KHAKI"
+    };
+
+
+    var GARMENT_PREFIX = [
+
+        "SATIN ",
+        "TEE ",
+        "DUFFLE ",
+        "CAMO ",
+        "HOODIE ",
+        "SWEATSHIRT ",
+        "CARDIGAN ",
+        "POLO ",
+        "STOLE "
+    ];
+
+
+    function baseColour(name) {
+
+        var text = String(
+            name === null ||
+            name === undefined
+                ? ""
+                : name
+        )
+        .trim()
+        .toUpperCase();
+
+
+        /* Satin jackets are BODY/TRIM */
+
+        if (text.indexOf("/") !== -1) {
+
+            text =
+                text.split("/")[0];
         }
 
-        if (NOT_A_COLOUR[name]) continue;      // leave the last colour
-        if (name === "NONE" && !OUTLINE_FIELDS[field]) continue;
-        if (COLOUR_ALIAS[name]) name = COLOUR_ALIAS[name];
-        values[field] = name;
 
-      } else if (field === "front_org") {
-        // NONE is sent deliberately when the customer picks OTHER or
-        // has not chosen: no Greek and no crest, rather than leaving
-        // the last organisation's artwork on a jacket nobody ordered.
-        values[field] = orgCode(raw);
+        for (
+            var i = 0;
+            i < GARMENT_PREFIX.length;
+            i++
+        ) {
 
-      } else if (field === "wording" || field === "crest_name_on"
-                 || field === "crest_on") {
-        // The store's value carries its price - "YES (+$25.00)".
-        values[field] = (norm(raw).indexOf("YES") === 0) ? "YES" : "NO";
+            if (
+                text.indexOf(
+                    GARMENT_PREFIX[i]
+                ) === 0
+            ) {
 
-      } else {
-        values[field] = String(raw).trim();
-      }
+                text =
+                    text.slice(
+                        GARMENT_PREFIX[i].length
+                    );
 
-      if (KWP_DEBUG) {
-        console.log("[kanework] " + field + " <- " +
-                    JSON.stringify((labelFor(el) || [])[0] || "") +
-                    " = " + JSON.stringify(values[field]));
-      }
-    }
-    return values;
-  }
-
-  /* ---- filling the store's own dropdowns ---------------------------
-   * This is the part that changes the ORDER, not just the picture. When
-   * the customer picks a jacket colour or an organisation, the four
-   * lettering colours are set to the combination that org sews on that
-   * jacket - the same one the customizer would show.
-   *
-   * It only fires when the JACKET or the ORG changes. A colour the
-   * customer sets by hand afterwards is left alone until they change
-   * one of those two again, so a deliberate choice is never quietly
-   * overwritten.
-   */
-  var lastJacket = null;
-  var lastOrg = null;
-  var seeded = false;        // has the opening state been noted yet?
-  var applying = false;      // our own writes must not retrigger this
-
-  function controlsFor(field) {
-    var out = [];
-    var els = document.querySelectorAll("select");
-    for (var i = 0; i < els.length; i++) {
-      if (fieldFor(els[i]) === field) out.push(els[i]);
-    }
-    return out;
-  }
-
-  function setSelect(el, wanted) {
-    if (!el || !wanted) return false;
-
-    var target = norm(wanted);
-    for (var i = 0; i < el.options.length; i++) {
-      if (norm(el.options[i].text) !== target) continue;
-
-      if (el.selectedIndex === i) return true;   // already right
-
-      el.selectedIndex = i;
-
-      // Ecwid listens for these to put the choice on the order. Setting
-      // .value alone changes what is on screen and nothing else.
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-      el.dispatchEvent(new Event("change", { bubbles: true }));
-      return true;
-    }
-
-    if (KWP_DEBUG) {
-      console.log("[kanework] no option named " + JSON.stringify(wanted) +
-                  " in that dropdown - left as it was");
-    }
-    return false;
-  }
-
-  function autoFill() {
-    if (applying) return;
-
-    var values = collect();
-    var jacket = values.jacket || null;
-    var org = values.front_org && values.front_org !== "NONE"
-      ? values.front_org : null;
-
-    // The FIRST look only notes what is already there. A customer who
-    // comes back to a part-filled page - or whose page Ecwid rebuilds
-    // mid-order - keeps the colours they chose; without this, the first
-    // run would treat their own selections as a change and overwrite
-    // them.
-    if (!seeded) {
-      seeded = true;
-      lastJacket = jacket;
-      lastOrg = org;
-      return;
-    }
-
-    // Nothing to go on, or nothing has changed.
-    if (!jacket || !org) { lastJacket = jacket; lastOrg = org; return; }
-    if (jacket === lastJacket && org === lastOrg) return;
-
-    lastJacket = jacket;
-    lastOrg = org;
-
-    var combo = recommended(org, jacket);
-    if (!combo) return;
-
-    if (KWP_DEBUG) {
-      console.log("[kanework] " + org + " on " + jacket + " -> " +
-                  combo[0] + " letters, " + combo[1] + " outline");
-    }
-
-    applying = true;
-    try {
-      // Letters and the line number take the letter colour; both
-      // outlines take the outline colour.
-      var pairs = [["letter", combo[0]], ["number_color", combo[0]],
-                   ["outline", combo[1]], ["number_outline", combo[1]]];
-      for (var i = 0; i < pairs.length; i++) {
-        var controls = controlsFor(pairs[i][0]);
-        for (var j = 0; j < controls.length; j++) {
-          setSelect(controls[j], pairs[i][1]);
+                break;
+            }
         }
-      }
-    } finally {
-      applying = false;
+
+
+        text =
+            text
+            .replace(/\s+/g, " ")
+            .trim();
+
+
+        return (
+            BASE_COLOUR[text] ||
+            text
+        );
     }
-  }
 
-  /* ---- sending them to the preview --------------------------------- */
 
-  function frame() {
-    var frames = document.getElementsByTagName("iframe");
-    for (var i = 0; i < frames.length; i++) {
-      var src = frames[i].getAttribute("src") || "";
-      if (src.indexOf(PREVIEW_HOST) !== -1) return frames[i];
+    function recommended(
+        org,
+        jacket
+    ) {
+
+        if (!org) {
+            return null;
+        }
+
+
+        var byJacket =
+            APPROVED[org];
+
+        var plain =
+            baseColour(jacket);
+
+
+        if (
+            byJacket &&
+            byJacket[plain]
+        ) {
+
+            return byJacket[plain];
+        }
+
+
+        return (
+            ORG_FALLBACK[org] ||
+            null
+        );
     }
-    return null;
-  }
 
-  // Create the preview automatically. The older bridge only LOOKED for
-  // an iframe, which meant nothing appeared unless one had been added
-  // to the Ecwid product page by some other method. This version owns
-  // the whole job: find a Kanework option, insert the preview after the
-  // product options, and then feed it the customer's selections.
-  function ensureFrame() {
-    var existing = frame();
-    if (existing) return existing;
 
-    // Only add a preview on a product page that actually contains at
-    // least one option this bridge understands. This keeps it off the
-    // catalog, cart, checkout, and unrelated products.
-    var controls = document.querySelectorAll("input,select,textarea");
-    var matched = [];
-    for (var i = 0; i < controls.length; i++) {
-      if (controls[i].type === "hidden" || controls[i].type === "file") continue;
-      if (fieldFor(controls[i])) matched.push(controls[i]);
+    /* =========================================================
+       TEXT NORMALIZATION
+       ========================================================= */
+
+    function norm(s) {
+
+        return String(
+            s === null ||
+            s === undefined
+                ? ""
+                : s
+        )
+
+        .replace(
+            /[\u2018\u2019\u201c\u201d]/g,
+            ""
+        )
+
+        .replace(
+            /[^A-Za-z0-9]+/g,
+            " "
+        )
+
+        .replace(
+            /\s+/g,
+            " "
+        )
+
+        .trim()
+
+        .toUpperCase();
     }
-    if (!matched.length) return null;
 
-    var box = document.getElementById("kanework-preview-box");
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "kanework-preview-box";
-      box.style.cssText =
-        "width:100%;max-width:980px;margin:18px 0 8px;clear:both;";
 
-      var heading = document.createElement("div");
-      heading.textContent = "Live Design Preview";
-      heading.style.cssText =
-        "font:600 18px system-ui,-apple-system,Segoe UI,sans-serif;" +
-        "margin:0 0 8px;color:inherit;";
-      box.appendChild(heading);
+    function normColour(s) {
 
-      var iframe = document.createElement("iframe");
-      iframe.id = "kanework-preview-frame";
-      iframe.src = PREVIEW_URL;
-      iframe.title = "Live design preview";
-      iframe.loading = "eager";
-      iframe.setAttribute("scrolling", "no");
-      iframe.style.cssText =
-        "display:block;width:100%;height:760px;border:0;background:#fff;";
-      box.appendChild(iframe);
+        return String(
+            s === null ||
+            s === undefined
+                ? ""
+                : s
+        )
 
-      // Ecwid changes class names between storefront themes. Prefer its
-      // known option containers, then fall back to immediately after the
-      // last Kanework option so the preview still appears in custom themes.
-      var mount = document.querySelector(
-        ".product-details__product-options," +
-        ".details-product-options," +
-        ".ec-store__product-page .product-details__sidebar"
-      );
+        .replace(
+            /[\u2018\u2019\u201c\u201d]/g,
+            ""
+        )
 
-      if (mount) {
-        mount.appendChild(box);
-      } else {
-        var last = matched[matched.length - 1];
-        var optionWrap = last.closest ? last.closest(
-          ".form-control__inline-label,.form-control,.details-product-option," +
-          ".product-details__product-option"
-        ) : null;
-        var anchor = optionWrap || last.parentElement || last;
-        if (anchor.parentNode) {
-          anchor.parentNode.insertBefore(box, anchor.nextSibling);
+        .replace(
+            /\([^)]*\)/g,
+            " "
+        )
+
+        .replace(
+            /[^A-Za-z0-9\/]+/g,
+            " "
+        )
+
+        .replace(
+            /\s*\/\s*/g,
+            "/"
+        )
+
+        .replace(
+            /\s+/g,
+            " "
+        )
+
+        .trim()
+
+        .toUpperCase();
+    }
+
+
+    /* =========================================================
+       GET TEXT WITHOUT INPUTS
+       ========================================================= */
+
+    function textWithoutControls(node) {
+
+        if (!node) {
+            return "";
+        }
+
+
+        var copy =
+            node.cloneNode(true);
+
+
+        var junk =
+            copy.querySelectorAll(
+                "input," +
+                "select," +
+                "textarea," +
+                "option," +
+                "button," +
+                "script," +
+                "style," +
+                "img," +
+                "svg"
+            );
+
+
+        for (
+            var i = 0;
+            i < junk.length;
+            i++
+        ) {
+
+            if (
+                junk[i].parentNode
+            ) {
+
+                junk[i]
+                    .parentNode
+                    .removeChild(
+                        junk[i]
+                    );
+            }
+        }
+
+
+        return (
+            copy.textContent ||
+            ""
+        );
+    }
+
+
+    /* =========================================================
+       FIND OPTION LABEL
+       ========================================================= */
+
+    function labelFor(el) {
+
+        var out = [];
+
+
+        /* label[for=id] */
+
+        if (el.id) {
+
+            var byFor = null;
+
+            try {
+
+                byFor =
+                    document.querySelector(
+                        'label[for="' +
+                        el.id.replace(
+                            /"/g,
+                            '\\"'
+                        ) +
+                        '"]'
+                    );
+
+            } catch (e) {
+
+                byFor = null;
+            }
+
+
+            if (byFor) {
+
+                out.push(
+                    norm(
+                        textWithoutControls(
+                            byFor
+                        )
+                    )
+                );
+            }
+        }
+
+
+        /* Wrapped label */
+
+        var wrap =
+            el.closest
+                ? el.closest("label")
+                : null;
+
+
+        if (wrap) {
+
+            out.push(
+                norm(
+                    textWithoutControls(
+                        wrap
+                    )
+                )
+            );
+        }
+
+
+        /* Walk upward through Ecwid wrappers */
+
+        var node =
+            el.parentElement;
+
+        var hops = 0;
+
+
+        while (
+            node &&
+            hops < 7
+        ) {
+
+            var text =
+                norm(
+                    textWithoutControls(
+                        node
+                    )
+                );
+
+
+            if (text) {
+                out.push(text);
+            }
+
+
+            node =
+                node.parentElement;
+
+            hops++;
+        }
+
+
+        return out;
+    }
+
+
+    /* =========================================================
+       MATCH OPTION LABEL
+       ========================================================= */
+
+    function matchLabel(label) {
+
+        if (!label) {
+            return null;
+        }
+
+
+        if (FIELDS[label]) {
+
+            return FIELDS[label];
+        }
+
+
+        /*
+         Use the longest matching known label.
+
+         This prevents:
+
+         LINE NUMBER COLOR
+
+         from accidentally matching:
+
+         LINE NUMBER
+        */
+
+        if (label.length <= 100) {
+
+            var best = null;
+
+
+            for (
+                var key in FIELDS
+            ) {
+
+                if (
+                    !Object.prototype
+                    .hasOwnProperty
+                    .call(
+                        FIELDS,
+                        key
+                    )
+                ) {
+
+                    continue;
+                }
+
+
+                if (
+                    label.indexOf(
+                        key
+                    ) === -1
+                ) {
+
+                    continue;
+                }
+
+
+                if (
+                    best === null ||
+                    key.length >
+                    best.length
+                ) {
+
+                    best = key;
+                }
+            }
+
+
+            if (best) {
+
+                return FIELDS[best];
+            }
+        }
+
+
+        return null;
+    }
+
+
+    function fieldFor(el) {
+
+        if (!el) {
+            return null;
+        }
+
+
+        /* aria-label first */
+
+        var aria =
+            el.getAttribute
+                ? el.getAttribute(
+                    "aria-label"
+                )
+                : null;
+
+
+        if (aria) {
+
+            var byAria =
+                matchLabel(
+                    norm(aria)
+                );
+
+
+            if (byAria) {
+
+                return byAria;
+            }
+        }
+
+
+        var levels =
+            labelFor(el);
+
+
+        for (
+            var i = 0;
+            i < levels.length;
+            i++
+        ) {
+
+            var hit =
+                matchLabel(
+                    levels[i]
+                );
+
+
+            if (hit) {
+
+                return hit;
+            }
+        }
+
+
+        return null;
+    }
+
+
+    /* =========================================================
+       READ CURRENT CONTROL VALUE
+       ========================================================= */
+
+    function valueOf(el) {
+
+        if (
+            el.type === "radio"
+        ) {
+
+            return el.checked
+                ? el.value
+                : null;
+        }
+
+
+        if (
+            el.type === "checkbox"
+        ) {
+
+            return el.checked
+                ? el.value
+                : null;
+        }
+
+
+        return el.value;
+    }
+
+
+    /* =========================================================
+       COLLECT ALL PRODUCT OPTIONS
+       ========================================================= */
+
+    function collect() {
+
+        var values = {};
+
+
+        var els =
+            document.querySelectorAll(
+                "input," +
+                "select," +
+                "textarea"
+            );
+
+
+        for (
+            var i = 0;
+            i < els.length;
+            i++
+        ) {
+
+            var el =
+                els[i];
+
+
+            if (
+                el.type === "hidden" ||
+                el.type === "file"
+            ) {
+
+                continue;
+            }
+
+
+            var field =
+                fieldFor(el);
+
+
+            if (!field) {
+
+                continue;
+            }
+
+
+            var raw =
+                valueOf(el);
+
+
+            if (
+                raw === null
+            ) {
+
+                continue;
+            }
+
+
+            /* COLORS */
+
+            if (
+                COLOUR_FIELDS[field]
+            ) {
+
+                var name =
+                    normColour(raw);
+
+
+                if (
+                    AUTO_FIELDS[field] &&
+                    NOT_CHOSEN[name]
+                ) {
+
+                    values[field] =
+                        "AUTO";
+
+                    continue;
+                }
+
+
+                if (
+                    NOT_A_COLOUR[name]
+                ) {
+
+                    continue;
+                }
+
+
+                if (
+                    name === "NONE" &&
+                    !OUTLINE_FIELDS[field]
+                ) {
+
+                    continue;
+                }
+
+
+                if (
+                    COLOUR_ALIAS[name]
+                ) {
+
+                    name =
+                        COLOUR_ALIAS[name];
+                }
+
+
+                values[field] =
+                    name;
+            }
+
+
+            /* ORGANIZATION */
+
+            else if (
+                field === "front_org"
+            ) {
+
+                values[field] =
+                    orgCode(raw);
+            }
+
+
+            /* YES / NO */
+
+            else if (
+                field === "wording" ||
+                field === "crest_name_on" ||
+                field === "crest_on"
+            ) {
+
+                values[field] =
+                    norm(raw)
+                    .indexOf("YES") === 0
+                        ? "YES"
+                        : "NO";
+            }
+
+
+            /* TEXT */
+
+            else {
+
+                values[field] =
+                    String(raw)
+                    .trim();
+            }
+
+
+            if (KWP_DEBUG) {
+
+                console.log(
+                    "[Kanework] " +
+                    field +
+                    " = ",
+                    values[field]
+                );
+            }
+        }
+
+
+        return values;
+    }
+
+
+    /* =========================================================
+       FIND SELECTS FOR A PREVIEW FIELD
+       ========================================================= */
+
+    function controlsFor(field) {
+
+        var out = [];
+
+
+        var els =
+            document.querySelectorAll(
+                "select"
+            );
+
+
+        for (
+            var i = 0;
+            i < els.length;
+            i++
+        ) {
+
+            if (
+                fieldFor(
+                    els[i]
+                ) === field
+            ) {
+
+                out.push(
+                    els[i]
+                );
+            }
+        }
+
+
+        return out;
+    }
+
+
+    /* =========================================================
+       CHANGE ECWID SELECT
+       ========================================================= */
+
+    function setSelect(
+        el,
+        wanted
+    ) {
+
+        if (
+            !el ||
+            !wanted
+        ) {
+
+            return false;
+        }
+
+
+        var target =
+            norm(wanted);
+
+
+        for (
+            var i = 0;
+            i < el.options.length;
+            i++
+        ) {
+
+            if (
+                norm(
+                    el.options[i].text
+                ) !== target
+            ) {
+
+                continue;
+            }
+
+
+            if (
+                el.selectedIndex === i
+            ) {
+
+                return true;
+            }
+
+
+            el.selectedIndex = i;
+
+
+            el.dispatchEvent(
+                new Event(
+                    "input",
+                    {
+                        bubbles: true
+                    }
+                )
+            );
+
+
+            el.dispatchEvent(
+                new Event(
+                    "change",
+                    {
+                        bubbles: true
+                    }
+                )
+            );
+
+
+            return true;
+        }
+
+
+        return false;
+    }
+
+
+    /* =========================================================
+       AUTOMATIC ORGANIZATION COLORS
+       ========================================================= */
+
+    var lastJacket = null;
+    var lastOrg = null;
+
+    var seeded = false;
+    var applying = false;
+
+
+    function autoFill() {
+
+        if (applying) {
+            return;
+        }
+
+
+        var values =
+            collect();
+
+
+        var jacket =
+            values.jacket ||
+            null;
+
+
+        var org =
+            values.front_org &&
+            values.front_org !== "NONE"
+                ? values.front_org
+                : null;
+
+
+        /*
+         First run only records what is already selected.
+        */
+
+        if (!seeded) {
+
+            seeded = true;
+
+            lastJacket =
+                jacket;
+
+            lastOrg =
+                org;
+
+            return;
+        }
+
+
+        if (
+            !jacket ||
+            !org
+        ) {
+
+            lastJacket =
+                jacket;
+
+            lastOrg =
+                org;
+
+            return;
+        }
+
+
+        if (
+            jacket === lastJacket &&
+            org === lastOrg
+        ) {
+
+            return;
+        }
+
+
+        lastJacket =
+            jacket;
+
+        lastOrg =
+            org;
+
+
+        var combo =
+            recommended(
+                org,
+                jacket
+            );
+
+
+        if (!combo) {
+
+            return;
+        }
+
+
+        applying = true;
+
+
+        try {
+
+            var pairs = [
+
+                [
+                    "letter",
+                    combo[0]
+                ],
+
+                [
+                    "number_color",
+                    combo[0]
+                ],
+
+                [
+                    "outline",
+                    combo[1]
+                ],
+
+                [
+                    "number_outline",
+                    combo[1]
+                ]
+            ];
+
+
+            for (
+                var i = 0;
+                i < pairs.length;
+                i++
+            ) {
+
+                var controls =
+                    controlsFor(
+                        pairs[i][0]
+                    );
+
+
+                for (
+                    var j = 0;
+                    j < controls.length;
+                    j++
+                ) {
+
+                    setSelect(
+                        controls[j],
+                        pairs[i][1]
+                    );
+                }
+            }
+
+        } finally {
+
+            applying = false;
+        }
+    }
+
+
+    /* =========================================================
+       FIND EXISTING PREVIEW IFRAME
+       ========================================================= */
+
+    function frame() {
+
+        var byId =
+            document.getElementById(
+                PREVIEW_FRAME_ID
+            );
+
+
+        if (byId) {
+
+            return byId;
+        }
+
+
+        var frames =
+            document.getElementsByTagName(
+                "iframe"
+            );
+
+
+        for (
+            var i = 0;
+            i < frames.length;
+            i++
+        ) {
+
+            var src =
+                frames[i]
+                .getAttribute(
+                    "src"
+                ) || "";
+
+
+            if (
+                src.indexOf(
+                    PREVIEW_HOST
+                ) !== -1
+            ) {
+
+                return frames[i];
+            }
+        }
+
+
+        return null;
+    }
+
+
+    /* =========================================================
+       DETECT ECWID PRODUCT PAGE
+
+       IMPORTANT:
+       The old version required a recognized Kanework option
+       BEFORE it created the preview.
+
+       That could cause:
+           matched.length === 0
+           -> no iframe
+           -> completely blank product page
+
+       This version does NOT require an option match first.
+       ========================================================= */
+
+    function isProductPage() {
+
+        /*
+         Ecwid product page containers.
+        */
+
+        if (
+            document.querySelector(
+                ".ec-store__product-page"
+            )
+        ) {
+
+            return true;
+        }
+
+
+        if (
+            document.querySelector(
+                ".product-details"
+            )
+        ) {
+
+            return true;
+        }
+
+
+        if (
+            document.querySelector(
+                ".product-details__product-options"
+            )
+        ) {
+
+            return true;
+        }
+
+
+        /*
+         Fallback:
+         Your customizable products have recognizable fields.
+        */
+
+        var controls =
+            document.querySelectorAll(
+                "input," +
+                "select," +
+                "textarea"
+            );
+
+
+        for (
+            var i = 0;
+            i < controls.length;
+            i++
+        ) {
+
+            if (
+                controls[i].type === "hidden" ||
+                controls[i].type === "file"
+            ) {
+
+                continue;
+            }
+
+
+            if (
+                fieldFor(
+                    controls[i]
+                )
+            ) {
+
+                return true;
+            }
+        }
+
+
+        return false;
+    }
+
+
+    /* =========================================================
+       FIND WHERE PREVIEW SHOULD BE INSERTED
+       ========================================================= */
+
+    function findPreviewMount() {
+
+        /*
+         FIRST CHOICE:
+         Product option area.
+
+         This puts the preview with the customization controls.
+        */
+
+        var mount =
+            document.querySelector(
+                ".product-details__product-options"
+            );
+
+
+        if (mount) {
+
+            return {
+                type: "append",
+                node: mount
+            };
+        }
+
+
+        mount =
+            document.querySelector(
+                ".details-product-options"
+            );
+
+
+        if (mount) {
+
+            return {
+                type: "append",
+                node: mount
+            };
+        }
+
+
+        /*
+         SECOND CHOICE:
+         Product sidebar.
+        */
+
+        mount =
+            document.querySelector(
+                ".ec-store__product-page " +
+                ".product-details__sidebar"
+            );
+
+
+        if (mount) {
+
+            return {
+                type: "append",
+                node: mount
+            };
+        }
+
+
+        /*
+         THIRD CHOICE:
+         Find the last product option we recognize and
+         put the preview directly after it.
+        */
+
+        var controls =
+            document.querySelectorAll(
+                "input," +
+                "select," +
+                "textarea"
+            );
+
+
+        var last = null;
+
+
+        for (
+            var i = 0;
+            i < controls.length;
+            i++
+        ) {
+
+            if (
+                controls[i].type === "hidden" ||
+                controls[i].type === "file"
+            ) {
+
+                continue;
+            }
+
+
+            if (
+                fieldFor(
+                    controls[i]
+                )
+            ) {
+
+                last =
+                    controls[i];
+            }
+        }
+
+
+        if (last) {
+
+            var wrap =
+                last.closest
+                    ? last.closest(
+                        ".form-control," +
+                        ".form-control__inline-label," +
+                        ".details-product-option," +
+                        ".product-details__product-option"
+                    )
+                    : null;
+
+
+            var anchor =
+                wrap ||
+                last.parentElement ||
+                last;
+
+
+            if (
+                anchor &&
+                anchor.parentNode
+            ) {
+
+                return {
+                    type: "after",
+                    node: anchor
+                };
+            }
+        }
+
+
+        /*
+         FOURTH CHOICE:
+         Product page itself.
+        */
+
+        mount =
+            document.querySelector(
+                ".ec-store__product-page"
+            );
+
+
+        if (mount) {
+
+            return {
+                type: "append",
+                node: mount
+            };
+        }
+
+
+        mount =
+            document.querySelector(
+                ".product-details"
+            );
+
+
+        if (mount) {
+
+            return {
+                type: "append",
+                node: mount
+            };
+        }
+
+
+        return null;
+    }
+
+
+    /* =========================================================
+       CREATE LIVE PREVIEW
+       ========================================================= */
+
+    function ensureFrame() {
+
+        var existing =
+            frame();
+
+
+        if (existing) {
+
+            return existing;
+        }
+
+
+        /*
+         Do NOT create preview on catalog/cart/checkout pages.
+        */
+
+        if (!isProductPage()) {
+
+            return null;
+        }
+
+
+        var existingBox =
+            document.getElementById(
+                PREVIEW_BOX_ID
+            );
+
+
+        if (existingBox) {
+
+            var existingFrame =
+                existingBox.querySelector(
+                    "iframe"
+                );
+
+
+            if (existingFrame) {
+
+                return existingFrame;
+            }
+
+
+            /*
+             Broken leftover box.
+             Remove it and rebuild.
+            */
+
+            if (
+                existingBox.parentNode
+            ) {
+
+                existingBox
+                    .parentNode
+                    .removeChild(
+                        existingBox
+                    );
+            }
+        }
+
+
+        var destination =
+            findPreviewMount();
+
+
+        if (!destination) {
+
+            if (KWP_DEBUG) {
+
+                console.log(
+                    "[Kanework] " +
+                    "Product page found, " +
+                    "but preview mount " +
+                    "not ready yet."
+                );
+            }
+
+
+            return null;
+        }
+
+
+        /* ---------------------------------------------
+           OUTER PREVIEW BOX
+           --------------------------------------------- */
+
+        var box =
+            document.createElement(
+                "div"
+            );
+
+
+        box.id =
+            PREVIEW_BOX_ID;
+
+
+        box.setAttribute(
+            "data-kanework-preview",
+            "true"
+        );
+
+
+        box.style.cssText =
+            "display:block;" +
+            "box-sizing:border-box;" +
+            "width:100%;" +
+            "max-width:980px;" +
+            "margin:24px 0 12px 0;" +
+            "padding:0;" +
+            "clear:both;";
+
+
+        /* ---------------------------------------------
+           HEADING
+           --------------------------------------------- */
+
+        var heading =
+            document.createElement(
+                "div"
+            );
+
+
+        heading.textContent =
+            "Live Jacket Preview";
+
+
+        heading.style.cssText =
+            "display:block;" +
+            "font-family:Arial,sans-serif;" +
+            "font-size:20px;" +
+            "font-weight:700;" +
+            "line-height:1.3;" +
+            "margin:0 0 10px 0;" +
+            "padding:0;" +
+            "color:#222;";
+
+
+        box.appendChild(
+            heading
+        );
+
+
+        /* ---------------------------------------------
+           LOADING MESSAGE
+           --------------------------------------------- */
+
+        var loading =
+            document.createElement(
+                "div"
+            );
+
+
+        loading.id =
+            "kanework-preview-loading";
+
+
+        loading.textContent =
+            "Loading jacket preview...";
+
+
+        loading.style.cssText =
+            "font-family:Arial,sans-serif;" +
+            "font-size:13px;" +
+            "color:#777;" +
+            "margin:0 0 6px 0;";
+
+
+        box.appendChild(
+            loading
+        );
+
+
+        /* ---------------------------------------------
+           IFRAME
+           --------------------------------------------- */
+
+        var iframe =
+            document.createElement(
+                "iframe"
+            );
+
+
+        iframe.id =
+            PREVIEW_FRAME_ID;
+
+
+        iframe.src =
+            PREVIEW_URL;
+
+
+        iframe.title =
+            "Live Jacket Preview";
+
+
+        iframe.loading =
+            "eager";
+
+
+        iframe.setAttribute(
+            "scrolling",
+            "no"
+        );
+
+
+        iframe.setAttribute(
+            "allow",
+            "clipboard-read; clipboard-write"
+        );
+
+
+        iframe.style.cssText =
+            "display:block;" +
+            "box-sizing:border-box;" +
+            "width:100%;" +
+            "min-height:760px;" +
+            "height:760px;" +
+            "margin:0;" +
+            "padding:0;" +
+            "border:1px solid #ddd;" +
+            "border-radius:4px;" +
+            "background:#fff;";
+
+
+        iframe.addEventListener(
+            "load",
+            function () {
+
+                var msg =
+                    document.getElementById(
+                        "kanework-preview-loading"
+                    );
+
+
+                if (msg) {
+
+                    msg.style.display =
+                        "none";
+                }
+
+
+                /*
+                 Send current selections again after iframe loads.
+                */
+
+                setTimeout(
+                    send,
+                    100
+                );
+            }
+        );
+
+
+        box.appendChild(
+            iframe
+        );
+
+
+        /* ---------------------------------------------
+           INSERT INTO ECWID PAGE
+           --------------------------------------------- */
+
+        if (
+            destination.type ===
+            "after"
+        ) {
+
+            destination.node
+                .parentNode
+                .insertBefore(
+                    box,
+                    destination.node
+                        .nextSibling
+                );
+
         } else {
-          document.body.appendChild(box);
+
+            destination.node
+                .appendChild(
+                    box
+                );
         }
-      }
 
-      return iframe;
+
+        if (KWP_DEBUG) {
+
+            console.log(
+                "[Kanework] " +
+                "Live Jacket Preview inserted."
+            );
+        }
+
+
+        return iframe;
     }
 
-    return box.querySelector("iframe");
-  }
 
-  function send() {
-    // Set the store's own dropdowns FIRST, so the picture and the order
-    // agree - the values collected below are read after any auto-fill.
+    /* =========================================================
+       SEND OPTIONS TO PYTHON PREVIEW
+       ========================================================= */
+
+    function send() {
+
+        try {
+
+            autoFill();
+
+        } catch (e) {
+
+            if (KWP_DEBUG) {
+
+                console.log(
+                    "[Kanework] " +
+                    "Auto color fill failed:",
+                    e
+                );
+            }
+        }
+
+
+        var f =
+            ensureFrame();
+
+
+        if (
+            !f ||
+            !f.contentWindow
+        ) {
+
+            return;
+        }
+
+
+        var values =
+            collect();
+
+
+        if (KWP_DEBUG) {
+
+            console.log(
+                "[Kanework] " +
+                "Sending preview values:",
+                values
+            );
+        }
+
+
+        try {
+
+            f.contentWindow
+                .postMessage(
+
+                    {
+                        type:
+                            "kanework-preview",
+
+                        values:
+                            values
+                    },
+
+                    "*"
+                );
+
+        } catch (e) {
+
+            if (KWP_DEBUG) {
+
+                console.log(
+                    "[Kanework] " +
+                    "Preview send failed:",
+                    e
+                );
+            }
+        }
+    }
+
+
+    /* =========================================================
+       DEBOUNCE
+       ========================================================= */
+
+    var timer = null;
+
+
+    function schedule(wait) {
+
+        clearTimeout(
+            timer
+        );
+
+
+        timer =
+            setTimeout(
+                send,
+                wait === undefined
+                    ? 300
+                    : wait
+            );
+    }
+
+
+    /* =========================================================
+       CUSTOMER CHANGES PRODUCT OPTION
+       ========================================================= */
+
+    document.addEventListener(
+        "input",
+        function () {
+
+            schedule(150);
+        },
+        true
+    );
+
+
+    document.addEventListener(
+        "change",
+        function () {
+
+            schedule(150);
+        },
+        true
+    );
+
+
+    /* =========================================================
+       PYTHON PREVIEW SAYS IT IS READY
+       ========================================================= */
+
+    window.addEventListener(
+        "message",
+        function (ev) {
+
+            var d =
+                ev.data;
+
+
+            if (
+                d &&
+                d.type ===
+                "kanework-preview-ready"
+            ) {
+
+                send();
+            }
+        }
+    );
+
+
+    /* =========================================================
+       ECWID PAGE LOADED
+       ========================================================= */
+
+    function startPreview() {
+
+        /*
+         Multiple attempts are intentional.
+
+         Ecwid can render the product shell first and
+         inject the options later.
+        */
+
+        setTimeout(
+            function () {
+
+                ensureFrame();
+                send();
+
+            },
+            250
+        );
+
+
+        setTimeout(
+            function () {
+
+                ensureFrame();
+                send();
+
+            },
+            750
+        );
+
+
+        setTimeout(
+            function () {
+
+                ensureFrame();
+                send();
+
+            },
+            1500
+        );
+
+
+        setTimeout(
+            function () {
+
+                ensureFrame();
+                send();
+
+            },
+            3000
+        );
+    }
+
+
+    if (
+        window.Ecwid &&
+        Ecwid.OnPageLoaded
+    ) {
+
+        Ecwid.OnPageLoaded.add(
+            function () {
+
+                startPreview();
+            }
+        );
+
+    } else {
+
+        if (
+            document.readyState ===
+            "loading"
+        ) {
+
+            document.addEventListener(
+                "DOMContentLoaded",
+                function () {
+
+                    startPreview();
+                }
+            );
+
+        } else {
+
+            startPreview();
+        }
+    }
+
+
+    /* =========================================================
+       ECWID SINGLE-PAGE APP WATCHER
+       ========================================================= */
+
+    var domTimer = null;
+
+
     try {
-      autoFill();
+
+        new MutationObserver(
+            function () {
+
+                clearTimeout(
+                    domTimer
+                );
+
+
+                domTimer =
+                    setTimeout(
+                        function () {
+
+                            if (
+                                isProductPage()
+                            ) {
+
+                                ensureFrame();
+                                schedule(50);
+                            }
+
+                        },
+                        250
+                    );
+            }
+        )
+        .observe(
+            document.documentElement,
+            {
+                childList: true,
+                subtree: true
+            }
+        );
+
     } catch (e) {
-      if (KWP_DEBUG) console.log("[kanework] autofill failed", e);
+
+        if (KWP_DEBUG) {
+
+            console.log(
+                "[Kanework] " +
+                "MutationObserver failed:",
+                e
+            );
+        }
     }
 
-    var f = ensureFrame();
-    if (!f || !f.contentWindow) return;
 
-    var values = collect();
-    if (KWP_DEBUG) console.log("[kanework] sending", values);
+    /* =========================================================
+       EXTRA STARTUP FALLBACK
+       ========================================================= */
 
-    // A tiny on-screen readout so you can SEE what the bridge is
-    // reading without opening the console. Shows the jacket colour it
-    // is about to send and a version stamp - if the stamp is old, the
-    // browser is serving a cached bridge and needs a hard refresh.
-    try {
-      var tag = document.getElementById("kwp-readout");
-      if (!tag) {
-        tag = document.createElement("div");
-        tag.id = "kwp-readout";
-        tag.style.cssText =
-          "font:11px system-ui,sans-serif;color:#999;margin:4px 0;";
-        var fr = frame();
-        if (fr && fr.parentNode) fr.parentNode.insertBefore(tag, fr);
-      }
-      tag.textContent = "preview v3 - jacket: " +
-        (values.jacket || "(none read)");
-    } catch (e) {}
+    window.addEventListener(
+        "load",
+        function () {
 
-    try {
-      f.contentWindow.postMessage(
-        { type: "kanework-preview", values: values }, "*");
-    } catch (e) {
-      if (KWP_DEBUG) console.log("[kanework] send failed", e);
-    }
-  }
+            setTimeout(
+                function () {
 
-  var timer = null;
-  function schedule(wait) {
-    clearTimeout(timer);
-    timer = setTimeout(send, wait === undefined ? 300 : wait);
-  }
+                    ensureFrame();
+                    send();
 
-  /* ---- when to send ------------------------------------------------
-   * Listening on the document rather than on each field, because Ecwid
-   * rebuilds the option markup as the customer moves around the store
-   * and any listener attached to a field would be thrown away with it.
-   */
-  document.addEventListener("input", function () { schedule(); }, true);
-  document.addEventListener("change", function () { schedule(); }, true);
+                },
+                500
+            );
+        }
+    );
 
-  // The preview says hello when it has loaded. Answering that is what
-  // fills it in the first time, without guessing how long it took.
-  window.addEventListener("message", function (ev) {
-    var d = ev.data;
-    if (d && d.type === "kanework-preview-ready") send();
-  });
 
-  // And send once the store page settles, in case the preview loaded
-  // before this script did and its hello was missed.
-  if (window.Ecwid && Ecwid.OnPageLoaded) {
-    Ecwid.OnPageLoaded.add(function () {
-      // Two goes, on their own timers - schedule() would cancel the
-      // first with the second. The early one covers the normal case;
-      // the later one covers a slow iframe.
-      setTimeout(send, 800);
-      setTimeout(send, 2500);
-    });
-  } else {
-    schedule(1500);
-  }
-
-  // Ecwid is a single-page app and may rebuild the product markup without
-  // a full page load. Re-check after DOM changes so the preview is restored
-  // automatically after navigation or an option block refresh.
-  var domTimer = null;
-  try {
-    new MutationObserver(function () {
-      clearTimeout(domTimer);
-      domTimer = setTimeout(function () {
-        if (!frame()) ensureFrame();
-        schedule(50);
-      }, 250);
-    }).observe(document.documentElement, { childList: true, subtree: true });
-  } catch (e) {}
 })();
