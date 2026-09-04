@@ -1,2205 +1,2363 @@
 /* ============================================================
    KANEWORK / GREEK KUSTOMS
    ECWID LIVE JACKET PREVIEW BRIDGE
-
-   This script:
-   1. Detects an Ecwid PRODUCT page.
-   2. Creates the Live Design Preview automatically.
-   3. Loads https://tail261222.ts.net/
-   4. Reads the customer's Ecwid product options.
-   5. Sends those selections to the Python jacket preview.
-   6. Keeps working when Ecwid rebuilds the page dynamically.
    ============================================================ */
 
 (function () {
-    "use strict";
+  "use strict";
 
-    var KWP_DEBUG = false;
+  var KWP_DEBUG = false;
 
-    /* =========================================================
-       PREVIEW SERVER
-       ========================================================= */
+  /* ============================================================
+     PUBLIC PREVIEW SERVER
+     ============================================================ */
 
-    var PREVIEW_HOST = "tail261222.ts.net";
-    var PREVIEW_URL = "https://" + PREVIEW_HOST + "/";
-
-    var PREVIEW_BOX_ID = "kanework-preview-box";
-    var PREVIEW_FRAME_ID = "kanework-preview-frame";
+  var PREVIEW_HOST = "desktop-rreq2p1.tail261222.ts.net";
+  var PREVIEW_URL = "https://" + PREVIEW_HOST + "/";
 
 
-    /* =========================================================
-       ECWID OPTION LABEL -> PREVIEW FIELD
-       ========================================================= */
+  /* ============================================================
+     ECWID OPTION -> PREVIEW FIELD
+     ============================================================ */
 
-    var FIELDS = {
+  var FIELDS = {
 
-        "LINE NAME": "line",
-        "LINE NUMBER": "number",
-        "SHIP BOTTOM OF JACKET": "ship",
-        "CHAPTER": "chapter",
-        "CROSSING SEASON": "crossing",
-        "NECK LETTERING": "neck",
+    "LINE NAME": "line",
+    "LINE NUMBER": "number",
 
-        "JACKET COLOR": "jacket",
-        "LETTER COLOR": "letter",
-        "OUTLINE COLOR": "outline",
+    "SHIP BOTTOM OF JACKET": "ship",
 
-        "LINE NUMBER COLOR": "number_color",
-        "OUTLINE NUMBER": "number_outline",
+    "CHAPTER": "chapter",
+    "CROSSING SEASON": "crossing",
+    "NECK LETTERING": "neck",
 
-        "ORGANIZATION LETTER ON FRONT": "front_org",
+    "JACKET COLOR": "jacket",
 
-        "WORDING THRU LETTERS": "wording",
+    "LETTER COLOR": "letter",
+    "OUTLINE COLOR": "outline",
 
-        "ADD NAME UNDER CREST": "crest_name_on",
-        "NAME UNDER CREST": "crest_name",
+    "LINE NUMBER COLOR": "number_color",
+    "OUTLINE NUMBER": "number_outline",
 
-        "SIZE": "size",
+    "ORGANIZATION LETTER ON FRONT": "front_org",
 
-        /* Duffle bag options */
+    "WORDING THRU LETTERS": "wording",
 
-        "FREE NO CHARGE ORGANAZATION WORDING ON FRONT POCKET":
-            "front_text",
+    "ADD NAME UNDER CREST": "crest_name_on",
+    "NAME UNDER CREST": "crest_name",
 
-        "ORGANAZATION WORDING ON FRONT POCKET":
-            "front_text",
+    "SIZE": "size",
 
-        "DO YOU WANT WORDING UNDER GREEK LETTERS":
-            "crest_name_on",
+    /* Duffle bag options */
 
-        "CUSTOM WORDING UNDER":
-            "crest_name",
+    "FREE NO CHARGE ORGANAZATION WORDING ON FRONT POCKET":
+      "front_text",
 
-        "ADD CREST SHIELD TO TOP OF BAG":
-            "crest_on",
+    "ORGANAZATION WORDING ON FRONT POCKET":
+      "front_text",
 
-        "ADD CREST SHIELD":
-            "crest_on",
+    "DO YOU WANT WORDING UNDER GREEK LETTERS":
+      "crest_name_on",
 
-        "CREST SHIELD":
-            "crest_on",
+    "CUSTOM WORDING UNDER":
+      "crest_name",
 
-        "ADD CREST":
-            "crest_on",
+    "ADD CREST SHIELD TO TOP OF BAG":
+      "crest_on",
 
-        "CREST":
-            "crest_on"
-    };
+    "ADD CREST SHIELD":
+      "crest_on",
 
+    "CREST SHIELD":
+      "crest_on",
 
-    /* =========================================================
-       ORGANIZATION COLORS
-       ========================================================= */
+    "ADD CREST":
+      "crest_on",
 
-    var APPROVED = {
-
-        ALPHAKAPPAALPHA: {
-            BLACK: ["GREEN", "PINK"],
-            WHITE: ["PINK", "GREEN"],
-            PINK: ["PINK", "GREEN"],
-            GREEN: ["GREEN", "PINK"],
-            KHAKI: ["PINK", "GREEN"],
-            "HOT PINK": ["HOT PINK", "GREEN"]
-        },
-
-        DELTASIGMATHETA: {
-            BLACK: ["RED", "WHITE"],
-            WHITE: ["WHITE", "RED"],
-            RED: ["RED", "WHITE"],
-            CRIMSON: ["CRIMSON", "KHAKI"],
-            KHAKI: ["RED", "WHITE"],
-            MAROON: ["CRIMSON", "KHAKI"]
-        },
-
-        ZETAPHIBETA: {
-            BLACK: ["BLUE", "WHITE"],
-            WHITE: ["WHITE", "BLUE"],
-            BLUE: ["BLUE", "WHITE"],
-            KHAKI: ["BLUE", "WHITE"]
-        },
-
-        SIGMAGAMMARHO: {
-            WHITE: ["YELLOW", "BLUE"],
-            BLACK: ["BLUE", "YELLOW"],
-            YELLOW: ["YELLOW", "BLUE"],
-            BLUE: ["BLUE", "YELLOW"],
-            KHAKI: ["BLUE", "YELLOW"]
-        },
-
-        ALPHAPHIALPHA: {
-            BLACK: ["BLACK", "OLD GOLD"],
-            WHITE: ["OLD GOLD", "BLACK"],
-            KHAKI: ["OLD GOLD", "BLACK"]
-        },
-
-        KAPPAALPHAPSI: {
-            WHITE: ["WHITE", "RED"],
-            RED: ["RED", "WHITE"],
-            BLACK: ["RED", "WHITE"],
-            CRIMSON: ["CRIMSON", "KHAKI"],
-            KHAKI: ["RED", "WHITE"],
-            MAROON: ["CRIMSON", "KHAKI"]
-        },
-
-        OMEGAPSIPHI: {
-            PURPLE: ["PURPLE", "OLD GOLD"]
-        },
-
-        PHIBETASIGMA: {
-            WHITE: ["WHITE", "BLUE"],
-            BLACK: ["BLUE", "WHITE"],
-            BLUE: ["BLUE", "WHITE"],
-            KHAKI: ["BLUE", "WHITE"]
-        },
-
-        IOTAPHITHETA: {
-            BROWN: ["BROWN", "YELLOW"],
-            YELLOW: ["YELLOW", "BROWN"],
-            KHAKI: ["YELLOW", "BROWN"]
-        }
-    };
+    "CREST":
+      "crest_on"
+  };
 
 
-    var ORG_FALLBACK = {
+  /* ============================================================
+     ORGANIZATION FALLBACK COLORS
+     ============================================================ */
 
-        ALPHAKAPPAALPHA:
-            ["PINK", "GREEN"],
+  var ORG_FALLBACK = {
 
-        DELTASIGMATHETA:
-            ["WHITE", "RED"],
+    ALPHAKAPPAALPHA:
+      ["PINK", "GREEN"],
 
-        ZETAPHIBETA:
-            ["WHITE", "BLUE"],
+    DELTASIGMATHETA:
+      ["WHITE", "RED"],
 
-        SIGMAGAMMARHO:
-            ["YELLOW", "BLUE"],
+    ZETAPHIBETA:
+      ["WHITE", "BLUE"],
 
-        ALPHAPHIALPHA:
-            ["OLD GOLD", "BLACK"],
+    SIGMAGAMMARHO:
+      ["YELLOW", "BLUE"],
 
-        KAPPAALPHAPSI:
-            ["WHITE", "CRIMSON"],
+    ALPHAPHIALPHA:
+      ["OLD GOLD", "BLACK"],
 
-        OMEGAPSIPHI:
-            ["OLD GOLD", "PURPLE"],
+    KAPPAALPHAPSI:
+      ["WHITE", "CRIMSON"],
 
-        PHIBETASIGMA:
-            ["WHITE", "BLUE"],
+    OMEGAPSIPHI:
+      ["OLD GOLD", "PURPLE"],
 
-        IOTAPHITHETA:
-            ["YELLOW", "BROWN"]
-    };
+    PHIBETASIGMA:
+      ["WHITE", "BLUE"],
+
+    IOTAPHITHETA:
+      ["YELLOW", "BROWN"]
+  };
 
 
-    /* =========================================================
-       ORGANIZATION NORMALIZATION
-       ========================================================= */
+  function orgCode(raw) {
 
-    function orgCode(raw) {
+    var code = String(
+      raw === null ||
+      raw === undefined
+        ? ""
+        : raw
+    )
+      .toUpperCase()
+      .replace(/[^A-Z]/g, "");
 
-        var code = String(
-            raw === null ||
-            raw === undefined
-                ? ""
-                : raw
-        )
-        .toUpperCase()
-        .replace(/[^A-Z]/g, "");
 
-        return Object.prototype.hasOwnProperty.call(
-            ORG_FALLBACK,
-            code
-        )
-            ? code
-            : "NONE";
+    return Object.prototype.hasOwnProperty.call(
+      ORG_FALLBACK,
+      code
+    )
+      ? code
+      : "NONE";
+  }
+
+
+  /* ============================================================
+     COLOR FIELDS
+     ============================================================ */
+
+  var COLOUR_FIELDS = {
+
+    jacket: 1,
+    letter: 1,
+    outline: 1,
+
+    number_color: 1,
+    number_outline: 1
+  };
+
+
+  var OUTLINE_FIELDS = {
+
+    outline: 1,
+    number_outline: 1
+  };
+
+
+  var AUTO_FIELDS = {
+
+    letter: 1,
+    outline: 1,
+
+    number_color: 1,
+    number_outline: 1
+  };
+
+
+  var COLOUR_ALIAS = {
+
+    "CREAM": "KHAKI",
+    "TAN": "KHAKI",
+
+    "GRAY": "GREY",
+
+    "ROYAL BLUE": "BLUE",
+    "ROYAL": "BLUE"
+  };
+
+
+  var NOT_A_COLOUR = {
+
+    "": 1,
+
+    "PLEASE CHOOSE": 1,
+    "PLEASE SELECT": 1,
+
+    "CHOOSE": 1,
+
+    "OTHER": 1,
+    "OTHER TYPE BELOW": 1
+  };
+
+
+  var NOT_CHOSEN = {
+
+    "": 1,
+
+    "PLEASE CHOOSE": 1,
+    "PLEASE SELECT": 1,
+
+    "CHOOSE": 1
+  };
+
+
+  /* ============================================================
+     APPROVED ORGANIZATION COLOR COMBINATIONS
+     ============================================================ */
+
+  var APPROVED = {
+
+    ALPHAKAPPAALPHA: {
+
+      BLACK:
+        ["GREEN", "PINK"],
+
+      WHITE:
+        ["PINK", "GREEN"],
+
+      PINK:
+        ["PINK", "GREEN"],
+
+      GREEN:
+        ["GREEN", "PINK"],
+
+      KHAKI:
+        ["PINK", "GREEN"],
+
+      "HOT PINK":
+        ["HOT PINK", "GREEN"]
+    },
+
+
+    DELTASIGMATHETA: {
+
+      BLACK:
+        ["RED", "WHITE"],
+
+      WHITE:
+        ["WHITE", "RED"],
+
+      RED:
+        ["RED", "WHITE"],
+
+      CRIMSON:
+        ["CRIMSON", "KHAKI"],
+
+      KHAKI:
+        ["RED", "WHITE"],
+
+      MAROON:
+        ["CRIMSON", "KHAKI"]
+    },
+
+
+    ZETAPHIBETA: {
+
+      BLACK:
+        ["BLUE", "WHITE"],
+
+      WHITE:
+        ["WHITE", "BLUE"],
+
+      BLUE:
+        ["BLUE", "WHITE"],
+
+      KHAKI:
+        ["BLUE", "WHITE"]
+    },
+
+
+    SIGMAGAMMARHO: {
+
+      WHITE:
+        ["YELLOW", "BLUE"],
+
+      BLACK:
+        ["BLUE", "YELLOW"],
+
+      YELLOW:
+        ["YELLOW", "BLUE"],
+
+      BLUE:
+        ["BLUE", "YELLOW"],
+
+      KHAKI:
+        ["BLUE", "YELLOW"]
+    },
+
+
+    ALPHAPHIALPHA: {
+
+      BLACK:
+        ["BLACK", "OLD GOLD"],
+
+      WHITE:
+        ["OLD GOLD", "BLACK"],
+
+      KHAKI:
+        ["OLD GOLD", "BLACK"]
+    },
+
+
+    KAPPAALPHAPSI: {
+
+      WHITE:
+        ["WHITE", "RED"],
+
+      RED:
+        ["RED", "WHITE"],
+
+      BLACK:
+        ["RED", "WHITE"],
+
+      CRIMSON:
+        ["CRIMSON", "KHAKI"],
+
+      KHAKI:
+        ["RED", "WHITE"],
+
+      MAROON:
+        ["CRIMSON", "KHAKI"]
+    },
+
+
+    OMEGAPSIPHI: {
+
+      PURPLE:
+        ["PURPLE", "OLD GOLD"]
+    },
+
+
+    PHIBETASIGMA: {
+
+      WHITE:
+        ["WHITE", "BLUE"],
+
+      BLACK:
+        ["BLUE", "WHITE"],
+
+      BLUE:
+        ["BLUE", "WHITE"],
+
+      KHAKI:
+        ["BLUE", "WHITE"]
+    },
+
+
+    IOTAPHITHETA: {
+
+      BROWN:
+        ["BROWN", "YELLOW"],
+
+      YELLOW:
+        ["YELLOW", "BROWN"],
+
+      KHAKI:
+        ["YELLOW", "BROWN"]
+    }
+  };
+
+
+  /* ============================================================
+     GARMENT BASE COLORS
+     ============================================================ */
+
+  var BASE_COLOUR = {
+
+    "ROYAL": "BLUE",
+
+    "TRUE ROYAL": "BLUE",
+
+    "CAROLINA BLUE": "BLUE",
+
+    "COOL BLUE": "BLUE",
+
+    "COLUMBIA": "BLUE",
+
+    "AQUA": "BLUE",
+
+    "KELLY": "GREEN",
+
+    "SAGE": "GREEN",
+
+    "MAIZE YELLOW": "YELLOW",
+
+    "CARDINAL": "CRIMSON",
+
+    "FUCHSIA": "HOT PINK",
+
+    "TEAM PURPLE": "PURPLE",
+
+    "NATURAL": "KHAKI",
+
+    "TAN": "KHAKI",
+
+    "CREAM": "KHAKI",
+
+    "ASH": "GREY",
+
+    "GRAY": "GREY",
+
+    "WOODLAND": "KHAKI"
+  };
+
+
+  var GARMENT_PREFIX = [
+
+    "SATIN ",
+
+    "TEE ",
+
+    "DUFFLE ",
+
+    "CAMO ",
+
+    "HOODIE ",
+
+    "SWEATSHIRT ",
+
+    "CARDIGAN ",
+
+    "POLO ",
+
+    "STOLE "
+  ];
+
+
+  function baseColour(name) {
+
+    var text = String(
+      name === null ||
+      name === undefined
+        ? ""
+        : name
+    )
+      .trim()
+      .toUpperCase();
+
+
+    if (
+      text.indexOf("/") !== -1
+    ) {
+
+      text =
+        text.split("/")[0];
     }
 
 
-    /* =========================================================
-       COLOR SETTINGS
-       ========================================================= */
+    for (
+      var i = 0;
+      i < GARMENT_PREFIX.length;
+      i++
+    ) {
 
-    var COLOUR_FIELDS = {
-        jacket: 1,
-        letter: 1,
-        outline: 1,
-        number_color: 1,
-        number_outline: 1
-    };
-
-
-    var AUTO_FIELDS = {
-        letter: 1,
-        outline: 1,
-        number_color: 1,
-        number_outline: 1
-    };
-
-
-    var OUTLINE_FIELDS = {
-        outline: 1,
-        number_outline: 1
-    };
-
-
-    var COLOUR_ALIAS = {
-
-        "CREAM": "KHAKI",
-        "TAN": "KHAKI",
-
-        "GRAY": "GREY",
-
-        "ROYAL BLUE": "BLUE",
-        "ROYAL": "BLUE"
-    };
-
-
-    var NOT_A_COLOUR = {
-
-        "": 1,
-
-        "PLEASE CHOOSE": 1,
-        "PLEASE SELECT": 1,
-
-        "CHOOSE": 1,
-
-        "OTHER": 1,
-        "OTHER TYPE BELOW": 1
-    };
-
-
-    var NOT_CHOSEN = {
-
-        "": 1,
-
-        "PLEASE CHOOSE": 1,
-        "PLEASE SELECT": 1,
-
-        "CHOOSE": 1
-    };
-
-
-    /* =========================================================
-       GARMENT BASE COLOR
-       ========================================================= */
-
-    var BASE_COLOUR = {
-
-        "ROYAL": "BLUE",
-        "TRUE ROYAL": "BLUE",
-
-        "CAROLINA BLUE": "BLUE",
-        "COOL BLUE": "BLUE",
-        "COLUMBIA": "BLUE",
-        "AQUA": "BLUE",
-
-        "KELLY": "GREEN",
-        "SAGE": "GREEN",
-
-        "MAIZE YELLOW": "YELLOW",
-
-        "CARDINAL": "CRIMSON",
-
-        "FUCHSIA": "HOT PINK",
-
-        "TEAM PURPLE": "PURPLE",
-
-        "NATURAL": "KHAKI",
-        "TAN": "KHAKI",
-        "CREAM": "KHAKI",
-
-        "ASH": "GREY",
-        "GRAY": "GREY",
-
-        "WOODLAND": "KHAKI"
-    };
-
-
-    var GARMENT_PREFIX = [
-
-        "SATIN ",
-        "TEE ",
-        "DUFFLE ",
-        "CAMO ",
-        "HOODIE ",
-        "SWEATSHIRT ",
-        "CARDIGAN ",
-        "POLO ",
-        "STOLE "
-    ];
-
-
-    function baseColour(name) {
-
-        var text = String(
-            name === null ||
-            name === undefined
-                ? ""
-                : name
-        )
-        .trim()
-        .toUpperCase();
-
-
-        /* Satin jackets are BODY/TRIM */
-
-        if (text.indexOf("/") !== -1) {
-
-            text =
-                text.split("/")[0];
-        }
-
-
-        for (
-            var i = 0;
-            i < GARMENT_PREFIX.length;
-            i++
-        ) {
-
-            if (
-                text.indexOf(
-                    GARMENT_PREFIX[i]
-                ) === 0
-            ) {
-
-                text =
-                    text.slice(
-                        GARMENT_PREFIX[i].length
-                    );
-
-                break;
-            }
-        }
-
+      if (
+        text.indexOf(
+          GARMENT_PREFIX[i]
+        ) === 0
+      ) {
 
         text =
-            text
-            .replace(/\s+/g, " ")
-            .trim();
+          text.slice(
+            GARMENT_PREFIX[i].length
+          );
 
-
-        return (
-            BASE_COLOUR[text] ||
-            text
-        );
+        break;
+      }
     }
 
 
-    function recommended(
+    text =
+      text
+        .replace(/\s+/g, " ")
+        .trim();
+
+
+    return (
+      BASE_COLOUR[text] ||
+      text
+    );
+  }
+
+
+  function recommended(
+    org,
+    jacket
+  ) {
+
+    if (!org) {
+
+      return null;
+    }
+
+
+    var byJacket =
+      APPROVED[org];
+
+
+    var plain =
+      baseColour(jacket);
+
+
+    if (
+      byJacket &&
+      byJacket[plain]
+    ) {
+
+      return byJacket[plain];
+    }
+
+
+    return (
+      ORG_FALLBACK[org] ||
+      null
+    );
+  }
+
+
+  /* ============================================================
+     NORMALIZATION
+     ============================================================ */
+
+  function norm(s) {
+
+    return String(
+      s === null ||
+      s === undefined
+        ? ""
+        : s
+    )
+
+      .replace(
+        /[\u2018\u2019\u201c\u201d]/g,
+        ""
+      )
+
+      .replace(
+        /[^A-Za-z0-9]+/g,
+        " "
+      )
+
+      .replace(
+        /\s+/g,
+        " "
+      )
+
+      .trim()
+
+      .toUpperCase();
+  }
+
+
+  function normColour(s) {
+
+    return String(
+      s === null ||
+      s === undefined
+        ? ""
+        : s
+    )
+
+      .replace(
+        /[\u2018\u2019\u201c\u201d]/g,
+        ""
+      )
+
+      .replace(
+        /\([^)]*\)/g,
+        " "
+      )
+
+      .replace(
+        /[^A-Za-z0-9\/]+/g,
+        " "
+      )
+
+      .replace(
+        /\s*\/\s*/g,
+        "/"
+      )
+
+      .replace(
+        /\s+/g,
+        " "
+      )
+
+      .trim()
+
+      .toUpperCase();
+  }
+
+
+  /* ============================================================
+     GET LABEL TEXT WITHOUT INPUT CONTROLS
+     ============================================================ */
+
+  function textWithoutControls(node) {
+
+    if (!node) {
+
+      return "";
+    }
+
+
+    var copy =
+      node.cloneNode(true);
+
+
+    var junk =
+      copy.querySelectorAll(
+        "input," +
+        "select," +
+        "textarea," +
+        "option," +
+        "button," +
+        "script," +
+        "style," +
+        "img," +
+        "svg"
+      );
+
+
+    for (
+      var i = 0;
+      i < junk.length;
+      i++
+    ) {
+
+      if (
+        junk[i].parentNode
+      ) {
+
+        junk[i]
+          .parentNode
+          .removeChild(
+            junk[i]
+          );
+      }
+    }
+
+
+    return (
+      copy.textContent ||
+      ""
+    );
+  }
+
+
+  /* ============================================================
+     FIND ECWID OPTION LABEL
+     ============================================================ */
+
+  function labelFor(el) {
+
+    var out = [];
+
+
+    if (el.id) {
+
+      var byFor = null;
+
+
+      try {
+
+        byFor =
+          document.querySelector(
+            'label[for="' +
+            el.id.replace(
+              /"/g,
+              '\\"'
+            ) +
+            '"]'
+          );
+
+      } catch (e) {
+
+        byFor = null;
+      }
+
+
+      if (byFor) {
+
+        out.push(
+          norm(
+            textWithoutControls(
+              byFor
+            )
+          )
+        );
+      }
+    }
+
+
+    var wrap =
+      el.closest
+        ? el.closest("label")
+        : null;
+
+
+    if (wrap) {
+
+      out.push(
+        norm(
+          textWithoutControls(
+            wrap
+          )
+        )
+      );
+    }
+
+
+    var node =
+      el.parentElement;
+
+
+    var hops = 0;
+
+
+    while (
+      node &&
+      hops < 7
+    ) {
+
+      var text =
+        norm(
+          textWithoutControls(
+            node
+          )
+        );
+
+
+      if (text) {
+
+        out.push(text);
+      }
+
+
+      node =
+        node.parentElement;
+
+      hops++;
+    }
+
+
+    return out;
+  }
+
+
+  /* ============================================================
+     MATCH LABEL
+     ============================================================ */
+
+  function matchLabel(label) {
+
+    if (!label) {
+
+      return null;
+    }
+
+
+    if (
+      FIELDS[label]
+    ) {
+
+      return FIELDS[label];
+    }
+
+
+    if (
+      label.length <= 100
+    ) {
+
+      var best = null;
+
+
+      for (
+        var key in FIELDS
+      ) {
+
+        if (
+          !Object.prototype
+            .hasOwnProperty
+            .call(
+              FIELDS,
+              key
+            )
+        ) {
+
+          continue;
+        }
+
+
+        if (
+          label.indexOf(
+            key
+          ) === -1
+        ) {
+
+          continue;
+        }
+
+
+        if (
+          best === null ||
+          key.length >
+          best.length
+        ) {
+
+          best = key;
+        }
+      }
+
+
+      if (best) {
+
+        return FIELDS[best];
+      }
+    }
+
+
+    return null;
+  }
+
+
+  function fieldFor(el) {
+
+    if (!el) {
+
+      return null;
+    }
+
+
+    var aria =
+      el.getAttribute
+        ? el.getAttribute(
+            "aria-label"
+          )
+        : null;
+
+
+    if (aria) {
+
+      var byAria =
+        matchLabel(
+          norm(aria)
+        );
+
+
+      if (byAria) {
+
+        return byAria;
+      }
+    }
+
+
+    var levels =
+      labelFor(el);
+
+
+    for (
+      var i = 0;
+      i < levels.length;
+      i++
+    ) {
+
+      var hit =
+        matchLabel(
+          levels[i]
+        );
+
+
+      if (hit) {
+
+        return hit;
+      }
+    }
+
+
+    return null;
+  }
+
+
+  /* ============================================================
+     READ CONTROL VALUE
+     ============================================================ */
+
+  function valueOf(el) {
+
+    if (
+      el.type === "radio"
+    ) {
+
+      return el.checked
+        ? el.value
+        : null;
+    }
+
+
+    if (
+      el.type === "checkbox"
+    ) {
+
+      return el.checked
+        ? el.value
+        : null;
+    }
+
+
+    return el.value;
+  }
+
+
+  /* ============================================================
+     COLLECT ECWID PRODUCT OPTIONS
+     ============================================================ */
+
+  function collect() {
+
+    var values = {};
+
+
+    var els =
+      document.querySelectorAll(
+        "input," +
+        "select," +
+        "textarea"
+      );
+
+
+    for (
+      var i = 0;
+      i < els.length;
+      i++
+    ) {
+
+      var el =
+        els[i];
+
+
+      if (
+        el.type === "hidden" ||
+        el.type === "file"
+      ) {
+
+        continue;
+      }
+
+
+      var field =
+        fieldFor(el);
+
+
+      if (!field) {
+
+        continue;
+      }
+
+
+      var raw =
+        valueOf(el);
+
+
+      if (
+        raw === null
+      ) {
+
+        continue;
+      }
+
+
+      if (
+        COLOUR_FIELDS[field]
+      ) {
+
+        var name =
+          normColour(raw);
+
+
+        if (
+          AUTO_FIELDS[field] &&
+          NOT_CHOSEN[name]
+        ) {
+
+          values[field] =
+            "AUTO";
+
+          continue;
+        }
+
+
+        if (
+          NOT_A_COLOUR[name]
+        ) {
+
+          continue;
+        }
+
+
+        if (
+          name === "NONE" &&
+          !OUTLINE_FIELDS[field]
+        ) {
+
+          continue;
+        }
+
+
+        if (
+          COLOUR_ALIAS[name]
+        ) {
+
+          name =
+            COLOUR_ALIAS[name];
+        }
+
+
+        values[field] =
+          name;
+      }
+
+
+      else if (
+        field === "front_org"
+      ) {
+
+        values[field] =
+          orgCode(raw);
+      }
+
+
+      else if (
+        field === "wording" ||
+        field === "crest_name_on" ||
+        field === "crest_on"
+      ) {
+
+        values[field] =
+          norm(raw)
+            .indexOf("YES") === 0
+            ? "YES"
+            : "NO";
+      }
+
+
+      else {
+
+        values[field] =
+          String(raw)
+            .trim();
+      }
+
+
+      if (
+        KWP_DEBUG
+      ) {
+
+        console.log(
+          "[Kanework] " +
+          field +
+          " = ",
+          values[field]
+        );
+      }
+    }
+
+
+    return values;
+  }
+
+
+  /* ============================================================
+     FIND ECWID SELECTS
+     ============================================================ */
+
+  function controlsFor(field) {
+
+    var out = [];
+
+
+    var els =
+      document.querySelectorAll(
+        "select"
+      );
+
+
+    for (
+      var i = 0;
+      i < els.length;
+      i++
+    ) {
+
+      if (
+        fieldFor(
+          els[i]
+        ) === field
+      ) {
+
+        out.push(
+          els[i]
+        );
+      }
+    }
+
+
+    return out;
+  }
+
+
+  /* ============================================================
+     SET ECWID SELECT
+     ============================================================ */
+
+  function setSelect(
+    el,
+    wanted
+  ) {
+
+    if (
+      !el ||
+      !wanted
+    ) {
+
+      return false;
+    }
+
+
+    var target =
+      norm(wanted);
+
+
+    for (
+      var i = 0;
+      i < el.options.length;
+      i++
+    ) {
+
+      if (
+        norm(
+          el.options[i].text
+        ) !== target
+      ) {
+
+        continue;
+      }
+
+
+      if (
+        el.selectedIndex === i
+      ) {
+
+        return true;
+      }
+
+
+      el.selectedIndex =
+        i;
+
+
+      el.dispatchEvent(
+        new Event(
+          "input",
+          {
+            bubbles: true
+          }
+        )
+      );
+
+
+      el.dispatchEvent(
+        new Event(
+          "change",
+          {
+            bubbles: true
+          }
+        )
+      );
+
+
+      return true;
+    }
+
+
+    if (
+      KWP_DEBUG
+    ) {
+
+      console.log(
+        "[Kanework] no option named:",
+        wanted
+      );
+    }
+
+
+    return false;
+  }
+
+
+  /* ============================================================
+     AUTO-FILL APPROVED COLORS
+     ============================================================ */
+
+  var lastJacket = null;
+
+  var lastOrg = null;
+
+  var seeded = false;
+
+  var applying = false;
+
+
+  function autoFill() {
+
+    if (
+      applying
+    ) {
+
+      return;
+    }
+
+
+    var values =
+      collect();
+
+
+    var jacket =
+      values.jacket ||
+      null;
+
+
+    var org =
+      values.front_org &&
+      values.front_org !== "NONE"
+        ? values.front_org
+        : null;
+
+
+    if (
+      !seeded
+    ) {
+
+      seeded = true;
+
+      lastJacket =
+        jacket;
+
+      lastOrg =
+        org;
+
+      return;
+    }
+
+
+    if (
+      !jacket ||
+      !org
+    ) {
+
+      lastJacket =
+        jacket;
+
+      lastOrg =
+        org;
+
+      return;
+    }
+
+
+    if (
+      jacket === lastJacket &&
+      org === lastOrg
+    ) {
+
+      return;
+    }
+
+
+    lastJacket =
+      jacket;
+
+    lastOrg =
+      org;
+
+
+    var combo =
+      recommended(
         org,
         jacket
-    ) {
-
-        if (!org) {
-            return null;
-        }
+      );
 
 
-        var byJacket =
-            APPROVED[org];
+    if (!combo) {
 
-        var plain =
-            baseColour(jacket);
-
-
-        if (
-            byJacket &&
-            byJacket[plain]
-        ) {
-
-            return byJacket[plain];
-        }
-
-
-        return (
-            ORG_FALLBACK[org] ||
-            null
-        );
+      return;
     }
 
 
-    /* =========================================================
-       TEXT NORMALIZATION
-       ========================================================= */
+    applying =
+      true;
 
-    function norm(s) {
 
-        return String(
-            s === null ||
-            s === undefined
-                ? ""
-                : s
-        )
+    try {
 
-        .replace(
-            /[\u2018\u2019\u201c\u201d]/g,
-            ""
-        )
+      var pairs = [
 
-        .replace(
-            /[^A-Za-z0-9]+/g,
-            " "
-        )
+        [
+          "letter",
+          combo[0]
+        ],
 
-        .replace(
-            /\s+/g,
-            " "
-        )
+        [
+          "number_color",
+          combo[0]
+        ],
 
-        .trim()
+        [
+          "outline",
+          combo[1]
+        ],
 
-        .toUpperCase();
-    }
+        [
+          "number_outline",
+          combo[1]
+        ]
+      ];
 
 
-    function normColour(s) {
-
-        return String(
-            s === null ||
-            s === undefined
-                ? ""
-                : s
-        )
-
-        .replace(
-            /[\u2018\u2019\u201c\u201d]/g,
-            ""
-        )
-
-        .replace(
-            /\([^)]*\)/g,
-            " "
-        )
-
-        .replace(
-            /[^A-Za-z0-9\/]+/g,
-            " "
-        )
-
-        .replace(
-            /\s*\/\s*/g,
-            "/"
-        )
-
-        .replace(
-            /\s+/g,
-            " "
-        )
-
-        .trim()
-
-        .toUpperCase();
-    }
-
-
-    /* =========================================================
-       GET TEXT WITHOUT INPUTS
-       ========================================================= */
-
-    function textWithoutControls(node) {
-
-        if (!node) {
-            return "";
-        }
-
-
-        var copy =
-            node.cloneNode(true);
-
-
-        var junk =
-            copy.querySelectorAll(
-                "input," +
-                "select," +
-                "textarea," +
-                "option," +
-                "button," +
-                "script," +
-                "style," +
-                "img," +
-                "svg"
-            );
-
-
-        for (
-            var i = 0;
-            i < junk.length;
-            i++
-        ) {
-
-            if (
-                junk[i].parentNode
-            ) {
-
-                junk[i]
-                    .parentNode
-                    .removeChild(
-                        junk[i]
-                    );
-            }
-        }
-
-
-        return (
-            copy.textContent ||
-            ""
-        );
-    }
-
-
-    /* =========================================================
-       FIND OPTION LABEL
-       ========================================================= */
-
-    function labelFor(el) {
-
-        var out = [];
-
-
-        /* label[for=id] */
-
-        if (el.id) {
-
-            var byFor = null;
-
-            try {
-
-                byFor =
-                    document.querySelector(
-                        'label[for="' +
-                        el.id.replace(
-                            /"/g,
-                            '\\"'
-                        ) +
-                        '"]'
-                    );
-
-            } catch (e) {
-
-                byFor = null;
-            }
-
-
-            if (byFor) {
-
-                out.push(
-                    norm(
-                        textWithoutControls(
-                            byFor
-                        )
-                    )
-                );
-            }
-        }
-
-
-        /* Wrapped label */
-
-        var wrap =
-            el.closest
-                ? el.closest("label")
-                : null;
-
-
-        if (wrap) {
-
-            out.push(
-                norm(
-                    textWithoutControls(
-                        wrap
-                    )
-                )
-            );
-        }
-
-
-        /* Walk upward through Ecwid wrappers */
-
-        var node =
-            el.parentElement;
-
-        var hops = 0;
-
-
-        while (
-            node &&
-            hops < 7
-        ) {
-
-            var text =
-                norm(
-                    textWithoutControls(
-                        node
-                    )
-                );
-
-
-            if (text) {
-                out.push(text);
-            }
-
-
-            node =
-                node.parentElement;
-
-            hops++;
-        }
-
-
-        return out;
-    }
-
-
-    /* =========================================================
-       MATCH OPTION LABEL
-       ========================================================= */
-
-    function matchLabel(label) {
-
-        if (!label) {
-            return null;
-        }
-
-
-        if (FIELDS[label]) {
-
-            return FIELDS[label];
-        }
-
-
-        /*
-         Use the longest matching known label.
-
-         This prevents:
-
-         LINE NUMBER COLOR
-
-         from accidentally matching:
-
-         LINE NUMBER
-        */
-
-        if (label.length <= 100) {
-
-            var best = null;
-
-
-            for (
-                var key in FIELDS
-            ) {
-
-                if (
-                    !Object.prototype
-                    .hasOwnProperty
-                    .call(
-                        FIELDS,
-                        key
-                    )
-                ) {
-
-                    continue;
-                }
-
-
-                if (
-                    label.indexOf(
-                        key
-                    ) === -1
-                ) {
-
-                    continue;
-                }
-
-
-                if (
-                    best === null ||
-                    key.length >
-                    best.length
-                ) {
-
-                    best = key;
-                }
-            }
-
-
-            if (best) {
-
-                return FIELDS[best];
-            }
-        }
-
-
-        return null;
-    }
-
-
-    function fieldFor(el) {
-
-        if (!el) {
-            return null;
-        }
-
-
-        /* aria-label first */
-
-        var aria =
-            el.getAttribute
-                ? el.getAttribute(
-                    "aria-label"
-                )
-                : null;
-
-
-        if (aria) {
-
-            var byAria =
-                matchLabel(
-                    norm(aria)
-                );
-
-
-            if (byAria) {
-
-                return byAria;
-            }
-        }
-
-
-        var levels =
-            labelFor(el);
-
-
-        for (
-            var i = 0;
-            i < levels.length;
-            i++
-        ) {
-
-            var hit =
-                matchLabel(
-                    levels[i]
-                );
-
-
-            if (hit) {
-
-                return hit;
-            }
-        }
-
-
-        return null;
-    }
-
-
-    /* =========================================================
-       READ CURRENT CONTROL VALUE
-       ========================================================= */
-
-    function valueOf(el) {
-
-        if (
-            el.type === "radio"
-        ) {
-
-            return el.checked
-                ? el.value
-                : null;
-        }
-
-
-        if (
-            el.type === "checkbox"
-        ) {
-
-            return el.checked
-                ? el.value
-                : null;
-        }
-
-
-        return el.value;
-    }
-
-
-    /* =========================================================
-       COLLECT ALL PRODUCT OPTIONS
-       ========================================================= */
-
-    function collect() {
-
-        var values = {};
-
-
-        var els =
-            document.querySelectorAll(
-                "input," +
-                "select," +
-                "textarea"
-            );
-
-
-        for (
-            var i = 0;
-            i < els.length;
-            i++
-        ) {
-
-            var el =
-                els[i];
-
-
-            if (
-                el.type === "hidden" ||
-                el.type === "file"
-            ) {
-
-                continue;
-            }
-
-
-            var field =
-                fieldFor(el);
-
-
-            if (!field) {
-
-                continue;
-            }
-
-
-            var raw =
-                valueOf(el);
-
-
-            if (
-                raw === null
-            ) {
-
-                continue;
-            }
-
-
-            /* COLORS */
-
-            if (
-                COLOUR_FIELDS[field]
-            ) {
-
-                var name =
-                    normColour(raw);
-
-
-                if (
-                    AUTO_FIELDS[field] &&
-                    NOT_CHOSEN[name]
-                ) {
-
-                    values[field] =
-                        "AUTO";
-
-                    continue;
-                }
-
-
-                if (
-                    NOT_A_COLOUR[name]
-                ) {
-
-                    continue;
-                }
-
-
-                if (
-                    name === "NONE" &&
-                    !OUTLINE_FIELDS[field]
-                ) {
-
-                    continue;
-                }
-
-
-                if (
-                    COLOUR_ALIAS[name]
-                ) {
-
-                    name =
-                        COLOUR_ALIAS[name];
-                }
-
-
-                values[field] =
-                    name;
-            }
-
-
-            /* ORGANIZATION */
-
-            else if (
-                field === "front_org"
-            ) {
-
-                values[field] =
-                    orgCode(raw);
-            }
-
-
-            /* YES / NO */
-
-            else if (
-                field === "wording" ||
-                field === "crest_name_on" ||
-                field === "crest_on"
-            ) {
-
-                values[field] =
-                    norm(raw)
-                    .indexOf("YES") === 0
-                        ? "YES"
-                        : "NO";
-            }
-
-
-            /* TEXT */
-
-            else {
-
-                values[field] =
-                    String(raw)
-                    .trim();
-            }
-
-
-            if (KWP_DEBUG) {
-
-                console.log(
-                    "[Kanework] " +
-                    field +
-                    " = ",
-                    values[field]
-                );
-            }
-        }
-
-
-        return values;
-    }
-
-
-    /* =========================================================
-       FIND SELECTS FOR A PREVIEW FIELD
-       ========================================================= */
-
-    function controlsFor(field) {
-
-        var out = [];
-
-
-        var els =
-            document.querySelectorAll(
-                "select"
-            );
-
-
-        for (
-            var i = 0;
-            i < els.length;
-            i++
-        ) {
-
-            if (
-                fieldFor(
-                    els[i]
-                ) === field
-            ) {
-
-                out.push(
-                    els[i]
-                );
-            }
-        }
-
-
-        return out;
-    }
-
-
-    /* =========================================================
-       CHANGE ECWID SELECT
-       ========================================================= */
-
-    function setSelect(
-        el,
-        wanted
-    ) {
-
-        if (
-            !el ||
-            !wanted
-        ) {
-
-            return false;
-        }
-
-
-        var target =
-            norm(wanted);
-
-
-        for (
-            var i = 0;
-            i < el.options.length;
-            i++
-        ) {
-
-            if (
-                norm(
-                    el.options[i].text
-                ) !== target
-            ) {
-
-                continue;
-            }
-
-
-            if (
-                el.selectedIndex === i
-            ) {
-
-                return true;
-            }
-
-
-            el.selectedIndex = i;
-
-
-            el.dispatchEvent(
-                new Event(
-                    "input",
-                    {
-                        bubbles: true
-                    }
-                )
-            );
-
-
-            el.dispatchEvent(
-                new Event(
-                    "change",
-                    {
-                        bubbles: true
-                    }
-                )
-            );
-
-
-            return true;
-        }
-
-
-        return false;
-    }
-
-
-    /* =========================================================
-       AUTOMATIC ORGANIZATION COLORS
-       ========================================================= */
-
-    var lastJacket = null;
-    var lastOrg = null;
-
-    var seeded = false;
-    var applying = false;
-
-
-    function autoFill() {
-
-        if (applying) {
-            return;
-        }
-
-
-        var values =
-            collect();
-
-
-        var jacket =
-            values.jacket ||
-            null;
-
-
-        var org =
-            values.front_org &&
-            values.front_org !== "NONE"
-                ? values.front_org
-                : null;
-
-
-        /*
-         First run only records what is already selected.
-        */
-
-        if (!seeded) {
-
-            seeded = true;
-
-            lastJacket =
-                jacket;
-
-            lastOrg =
-                org;
-
-            return;
-        }
-
-
-        if (
-            !jacket ||
-            !org
-        ) {
-
-            lastJacket =
-                jacket;
-
-            lastOrg =
-                org;
-
-            return;
-        }
-
-
-        if (
-            jacket === lastJacket &&
-            org === lastOrg
-        ) {
-
-            return;
-        }
-
-
-        lastJacket =
-            jacket;
-
-        lastOrg =
-            org;
-
-
-        var combo =
-            recommended(
-                org,
-                jacket
-            );
-
-
-        if (!combo) {
-
-            return;
-        }
-
-
-        applying = true;
-
-
-        try {
-
-            var pairs = [
-
-                [
-                    "letter",
-                    combo[0]
-                ],
-
-                [
-                    "number_color",
-                    combo[0]
-                ],
-
-                [
-                    "outline",
-                    combo[1]
-                ],
-
-                [
-                    "number_outline",
-                    combo[1]
-                ]
-            ];
-
-
-            for (
-                var i = 0;
-                i < pairs.length;
-                i++
-            ) {
-
-                var controls =
-                    controlsFor(
-                        pairs[i][0]
-                    );
-
-
-                for (
-                    var j = 0;
-                    j < controls.length;
-                    j++
-                ) {
-
-                    setSelect(
-                        controls[j],
-                        pairs[i][1]
-                    );
-                }
-            }
-
-        } finally {
-
-            applying = false;
-        }
-    }
-
-
-    /* =========================================================
-       FIND EXISTING PREVIEW IFRAME
-       ========================================================= */
-
-    function frame() {
-
-        var byId =
-            document.getElementById(
-                PREVIEW_FRAME_ID
-            );
-
-
-        if (byId) {
-
-            return byId;
-        }
-
-
-        var frames =
-            document.getElementsByTagName(
-                "iframe"
-            );
-
-
-        for (
-            var i = 0;
-            i < frames.length;
-            i++
-        ) {
-
-            var src =
-                frames[i]
-                .getAttribute(
-                    "src"
-                ) || "";
-
-
-            if (
-                src.indexOf(
-                    PREVIEW_HOST
-                ) !== -1
-            ) {
-
-                return frames[i];
-            }
-        }
-
-
-        return null;
-    }
-
-
-    /* =========================================================
-       DETECT ECWID PRODUCT PAGE
-
-       IMPORTANT:
-       The old version required a recognized Kanework option
-       BEFORE it created the preview.
-
-       That could cause:
-           matched.length === 0
-           -> no iframe
-           -> completely blank product page
-
-       This version does NOT require an option match first.
-       ========================================================= */
-
-    function isProductPage() {
-
-        /*
-         Ecwid product page containers.
-        */
-
-        if (
-            document.querySelector(
-                ".ec-store__product-page"
-            )
-        ) {
-
-            return true;
-        }
-
-
-        if (
-            document.querySelector(
-                ".product-details"
-            )
-        ) {
-
-            return true;
-        }
-
-
-        if (
-            document.querySelector(
-                ".product-details__product-options"
-            )
-        ) {
-
-            return true;
-        }
-
-
-        /*
-         Fallback:
-         Your customizable products have recognizable fields.
-        */
+      for (
+        var i = 0;
+        i < pairs.length;
+        i++
+      ) {
 
         var controls =
-            document.querySelectorAll(
-                "input," +
-                "select," +
-                "textarea"
-            );
+          controlsFor(
+            pairs[i][0]
+          );
 
 
         for (
-            var i = 0;
-            i < controls.length;
-            i++
+          var j = 0;
+          j < controls.length;
+          j++
         ) {
 
-            if (
-                controls[i].type === "hidden" ||
-                controls[i].type === "file"
-            ) {
-
-                continue;
-            }
-
-
-            if (
-                fieldFor(
-                    controls[i]
-                )
-            ) {
-
-                return true;
-            }
+          setSelect(
+            controls[j],
+            pairs[i][1]
+          );
         }
+      }
+
+    } finally {
+
+      applying =
+        false;
+    }
+  }
 
 
-        return false;
+  /* ============================================================
+     FIND EXISTING PREVIEW FRAME
+     ============================================================ */
+
+  function frame() {
+
+    var byId =
+      document.getElementById(
+        "kanework-preview-frame"
+      );
+
+
+    if (byId) {
+
+      return byId;
     }
 
 
-    /* =========================================================
-       FIND WHERE PREVIEW SHOULD BE INSERTED
-       ========================================================= */
-
-    function findPreviewMount() {
-
-        /*
-         FIRST CHOICE:
-         Product option area.
-
-         This puts the preview with the customization controls.
-        */
-
-        var mount =
-            document.querySelector(
-                ".product-details__product-options"
-            );
+    var frames =
+      document.getElementsByTagName(
+        "iframe"
+      );
 
 
-        if (mount) {
+    for (
+      var i = 0;
+      i < frames.length;
+      i++
+    ) {
 
-            return {
-                type: "append",
-                node: mount
-            };
-        }
-
-
-        mount =
-            document.querySelector(
-                ".details-product-options"
-            );
+      var src =
+        frames[i]
+          .getAttribute(
+            "src"
+          ) || "";
 
 
-        if (mount) {
+      if (
+        src.indexOf(
+          PREVIEW_HOST
+        ) !== -1
+      ) {
 
-            return {
-                type: "append",
-                node: mount
-            };
-        }
-
-
-        /*
-         SECOND CHOICE:
-         Product sidebar.
-        */
-
-        mount =
-            document.querySelector(
-                ".ec-store__product-page " +
-                ".product-details__sidebar"
-            );
-
-
-        if (mount) {
-
-            return {
-                type: "append",
-                node: mount
-            };
-        }
-
-
-        /*
-         THIRD CHOICE:
-         Find the last product option we recognize and
-         put the preview directly after it.
-        */
-
-        var controls =
-            document.querySelectorAll(
-                "input," +
-                "select," +
-                "textarea"
-            );
-
-
-        var last = null;
-
-
-        for (
-            var i = 0;
-            i < controls.length;
-            i++
-        ) {
-
-            if (
-                controls[i].type === "hidden" ||
-                controls[i].type === "file"
-            ) {
-
-                continue;
-            }
-
-
-            if (
-                fieldFor(
-                    controls[i]
-                )
-            ) {
-
-                last =
-                    controls[i];
-            }
-        }
-
-
-        if (last) {
-
-            var wrap =
-                last.closest
-                    ? last.closest(
-                        ".form-control," +
-                        ".form-control__inline-label," +
-                        ".details-product-option," +
-                        ".product-details__product-option"
-                    )
-                    : null;
-
-
-            var anchor =
-                wrap ||
-                last.parentElement ||
-                last;
-
-
-            if (
-                anchor &&
-                anchor.parentNode
-            ) {
-
-                return {
-                    type: "after",
-                    node: anchor
-                };
-            }
-        }
-
-
-        /*
-         FOURTH CHOICE:
-         Product page itself.
-        */
-
-        mount =
-            document.querySelector(
-                ".ec-store__product-page"
-            );
-
-
-        if (mount) {
-
-            return {
-                type: "append",
-                node: mount
-            };
-        }
-
-
-        mount =
-            document.querySelector(
-                ".product-details"
-            );
-
-
-        if (mount) {
-
-            return {
-                type: "append",
-                node: mount
-            };
-        }
-
-
-        return null;
+        return frames[i];
+      }
     }
 
 
-    /* =========================================================
-       CREATE LIVE PREVIEW
-       ========================================================= */
+    return null;
+  }
 
-    function ensureFrame() {
 
-        var existing =
-            frame();
+  /* ============================================================
+     DETECT ECWID PRODUCT PAGE
 
+     IMPORTANT:
+     We DO NOT require Ecwid options to be recognized before
+     creating the preview.
+     ============================================================ */
 
-        if (existing) {
+  function isProductPage() {
 
-            return existing;
-        }
+    if (
+      document.querySelector(
+        ".ec-store__product-page"
+      )
+    ) {
 
-
-        /*
-         Do NOT create preview on catalog/cart/checkout pages.
-        */
-
-        if (!isProductPage()) {
-
-            return null;
-        }
-
-
-        var existingBox =
-            document.getElementById(
-                PREVIEW_BOX_ID
-            );
-
-
-        if (existingBox) {
-
-            var existingFrame =
-                existingBox.querySelector(
-                    "iframe"
-                );
-
-
-            if (existingFrame) {
-
-                return existingFrame;
-            }
-
-
-            /*
-             Broken leftover box.
-             Remove it and rebuild.
-            */
-
-            if (
-                existingBox.parentNode
-            ) {
-
-                existingBox
-                    .parentNode
-                    .removeChild(
-                        existingBox
-                    );
-            }
-        }
-
-
-        var destination =
-            findPreviewMount();
-
-
-        if (!destination) {
-
-            if (KWP_DEBUG) {
-
-                console.log(
-                    "[Kanework] " +
-                    "Product page found, " +
-                    "but preview mount " +
-                    "not ready yet."
-                );
-            }
-
-
-            return null;
-        }
-
-
-        /* ---------------------------------------------
-           OUTER PREVIEW BOX
-           --------------------------------------------- */
-
-        var box =
-            document.createElement(
-                "div"
-            );
-
-
-        box.id =
-            PREVIEW_BOX_ID;
-
-
-        box.setAttribute(
-            "data-kanework-preview",
-            "true"
-        );
-
-
-        box.style.cssText =
-            "display:block;" +
-            "box-sizing:border-box;" +
-            "width:100%;" +
-            "max-width:980px;" +
-            "margin:24px 0 12px 0;" +
-            "padding:0;" +
-            "clear:both;";
-
-
-        /* ---------------------------------------------
-           HEADING
-           --------------------------------------------- */
-
-        var heading =
-            document.createElement(
-                "div"
-            );
-
-
-        heading.textContent =
-            "Live Jacket Preview";
-
-
-        heading.style.cssText =
-            "display:block;" +
-            "font-family:Arial,sans-serif;" +
-            "font-size:20px;" +
-            "font-weight:700;" +
-            "line-height:1.3;" +
-            "margin:0 0 10px 0;" +
-            "padding:0;" +
-            "color:#222;";
-
-
-        box.appendChild(
-            heading
-        );
-
-
-        /* ---------------------------------------------
-           LOADING MESSAGE
-           --------------------------------------------- */
-
-        var loading =
-            document.createElement(
-                "div"
-            );
-
-
-        loading.id =
-            "kanework-preview-loading";
-
-
-        loading.textContent =
-            "Loading jacket preview...";
-
-
-        loading.style.cssText =
-            "font-family:Arial,sans-serif;" +
-            "font-size:13px;" +
-            "color:#777;" +
-            "margin:0 0 6px 0;";
-
-
-        box.appendChild(
-            loading
-        );
-
-
-        /* ---------------------------------------------
-           IFRAME
-           --------------------------------------------- */
-
-        var iframe =
-            document.createElement(
-                "iframe"
-            );
-
-
-        iframe.id =
-            PREVIEW_FRAME_ID;
-
-
-        iframe.src =
-            PREVIEW_URL;
-
-
-        iframe.title =
-            "Live Jacket Preview";
-
-
-        iframe.loading =
-            "eager";
-
-
-        iframe.setAttribute(
-            "scrolling",
-            "no"
-        );
-
-
-        iframe.setAttribute(
-            "allow",
-            "clipboard-read; clipboard-write"
-        );
-
-
-        iframe.style.cssText =
-            "display:block;" +
-            "box-sizing:border-box;" +
-            "width:100%;" +
-            "min-height:760px;" +
-            "height:760px;" +
-            "margin:0;" +
-            "padding:0;" +
-            "border:1px solid #ddd;" +
-            "border-radius:4px;" +
-            "background:#fff;";
-
-
-        iframe.addEventListener(
-            "load",
-            function () {
-
-                var msg =
-                    document.getElementById(
-                        "kanework-preview-loading"
-                    );
-
-
-                if (msg) {
-
-                    msg.style.display =
-                        "none";
-                }
-
-
-                /*
-                 Send current selections again after iframe loads.
-                */
-
-                setTimeout(
-                    send,
-                    100
-                );
-            }
-        );
-
-
-        box.appendChild(
-            iframe
-        );
-
-
-        /* ---------------------------------------------
-           INSERT INTO ECWID PAGE
-           --------------------------------------------- */
-
-        if (
-            destination.type ===
-            "after"
-        ) {
-
-            destination.node
-                .parentNode
-                .insertBefore(
-                    box,
-                    destination.node
-                        .nextSibling
-                );
-
-        } else {
-
-            destination.node
-                .appendChild(
-                    box
-                );
-        }
-
-
-        if (KWP_DEBUG) {
-
-            console.log(
-                "[Kanework] " +
-                "Live Jacket Preview inserted."
-            );
-        }
-
-
-        return iframe;
+      return true;
     }
 
 
-    /* =========================================================
-       SEND OPTIONS TO PYTHON PREVIEW
-       ========================================================= */
+    if (
+      document.querySelector(
+        ".product-details"
+      )
+    ) {
 
-    function send() {
-
-        try {
-
-            autoFill();
-
-        } catch (e) {
-
-            if (KWP_DEBUG) {
-
-                console.log(
-                    "[Kanework] " +
-                    "Auto color fill failed:",
-                    e
-                );
-            }
-        }
-
-
-        var f =
-            ensureFrame();
-
-
-        if (
-            !f ||
-            !f.contentWindow
-        ) {
-
-            return;
-        }
-
-
-        var values =
-            collect();
-
-
-        if (KWP_DEBUG) {
-
-            console.log(
-                "[Kanework] " +
-                "Sending preview values:",
-                values
-            );
-        }
-
-
-        try {
-
-            f.contentWindow
-                .postMessage(
-
-                    {
-                        type:
-                            "kanework-preview",
-
-                        values:
-                            values
-                    },
-
-                    "*"
-                );
-
-        } catch (e) {
-
-            if (KWP_DEBUG) {
-
-                console.log(
-                    "[Kanework] " +
-                    "Preview send failed:",
-                    e
-                );
-            }
-        }
+      return true;
     }
 
 
-    /* =========================================================
-       DEBOUNCE
-       ========================================================= */
+    if (
+      document.querySelector(
+        ".product-details__product-options"
+      )
+    ) {
 
-    var timer = null;
+      return true;
+    }
 
 
-    function schedule(wait) {
+    if (
+      document.querySelector(
+        ".details-product-options"
+      )
+    ) {
 
-        clearTimeout(
-            timer
+      return true;
+    }
+
+
+    /*
+      Fallback:
+      check for one of our known product options.
+    */
+
+    var controls =
+      document.querySelectorAll(
+        "input," +
+        "select," +
+        "textarea"
+      );
+
+
+    for (
+      var i = 0;
+      i < controls.length;
+      i++
+    ) {
+
+      if (
+        controls[i].type === "hidden" ||
+        controls[i].type === "file"
+      ) {
+
+        continue;
+      }
+
+
+      if (
+        fieldFor(
+          controls[i]
+        )
+      ) {
+
+        return true;
+      }
+    }
+
+
+    return false;
+  }
+
+
+  /* ============================================================
+     FIND WHERE TO PUT PREVIEW
+     ============================================================ */
+
+  function findPreviewMount() {
+
+    var mount =
+      document.querySelector(
+        ".product-details__product-options"
+      );
+
+
+    if (mount) {
+
+      return {
+        type: "append",
+        node: mount
+      };
+    }
+
+
+    mount =
+      document.querySelector(
+        ".details-product-options"
+      );
+
+
+    if (mount) {
+
+      return {
+        type: "append",
+        node: mount
+      };
+    }
+
+
+    mount =
+      document.querySelector(
+        ".ec-store__product-page " +
+        ".product-details__sidebar"
+      );
+
+
+    if (mount) {
+
+      return {
+        type: "append",
+        node: mount
+      };
+    }
+
+
+    /*
+      Try placing after the last Kanework option.
+    */
+
+    var controls =
+      document.querySelectorAll(
+        "input," +
+        "select," +
+        "textarea"
+      );
+
+
+    var last =
+      null;
+
+
+    for (
+      var i = 0;
+      i < controls.length;
+      i++
+    ) {
+
+      if (
+        controls[i].type === "hidden" ||
+        controls[i].type === "file"
+      ) {
+
+        continue;
+      }
+
+
+      if (
+        fieldFor(
+          controls[i]
+        )
+      ) {
+
+        last =
+          controls[i];
+      }
+    }
+
+
+    if (last) {
+
+      var wrap =
+        last.closest
+          ? last.closest(
+              ".form-control," +
+              ".form-control__inline-label," +
+              ".details-product-option," +
+              ".product-details__product-option"
+            )
+          : null;
+
+
+      var anchor =
+        wrap ||
+        last.parentElement ||
+        last;
+
+
+      if (
+        anchor &&
+        anchor.parentNode
+      ) {
+
+        return {
+          type: "after",
+          node: anchor
+        };
+      }
+    }
+
+
+    /*
+      Last fallback:
+      product page itself.
+    */
+
+    mount =
+      document.querySelector(
+        ".ec-store__product-page"
+      );
+
+
+    if (mount) {
+
+      return {
+        type: "append",
+        node: mount
+      };
+    }
+
+
+    mount =
+      document.querySelector(
+        ".product-details"
+      );
+
+
+    if (mount) {
+
+      return {
+        type: "append",
+        node: mount
+      };
+    }
+
+
+    return null;
+  }
+
+
+  /* ============================================================
+     CREATE LIVE JACKET PREVIEW
+     ============================================================ */
+
+  function ensureFrame() {
+
+    var existing =
+      frame();
+
+
+    if (existing) {
+
+      return existing;
+    }
+
+
+    if (
+      !isProductPage()
+    ) {
+
+      return null;
+    }
+
+
+    var existingBox =
+      document.getElementById(
+        "kanework-preview-box"
+      );
+
+
+    if (
+      existingBox
+    ) {
+
+      var existingFrame =
+        existingBox.querySelector(
+          "iframe"
         );
 
 
-        timer =
-            setTimeout(
-                send,
-                wait === undefined
-                    ? 300
-                    : wait
-            );
+      if (
+        existingFrame
+      ) {
+
+        return existingFrame;
+      }
+
+
+      if (
+        existingBox.parentNode
+      ) {
+
+        existingBox
+          .parentNode
+          .removeChild(
+            existingBox
+          );
+      }
     }
 
 
-    /* =========================================================
-       CUSTOMER CHANGES PRODUCT OPTION
-       ========================================================= */
+    var destination =
+      findPreviewMount();
 
-    document.addEventListener(
-        "input",
-        function () {
 
-            schedule(150);
-        },
-        true
+    if (
+      !destination
+    ) {
+
+      return null;
+    }
+
+
+    /* ------------------------------------------------------------
+       PREVIEW CONTAINER
+       ------------------------------------------------------------ */
+
+    var box =
+      document.createElement(
+        "div"
+      );
+
+
+    box.id =
+      "kanework-preview-box";
+
+
+    box.setAttribute(
+      "data-kanework-preview",
+      "true"
     );
 
 
-    document.addEventListener(
-        "change",
-        function () {
+    box.style.cssText =
+      "display:block;" +
+      "box-sizing:border-box;" +
+      "width:100%;" +
+      "max-width:980px;" +
+      "margin:24px 0 12px 0;" +
+      "padding:0;" +
+      "clear:both;";
 
-            schedule(150);
-        },
-        true
+
+    /* ------------------------------------------------------------
+       TITLE
+       ------------------------------------------------------------ */
+
+    var heading =
+      document.createElement(
+        "div"
+      );
+
+
+    heading.textContent =
+      "Live Jacket Preview";
+
+
+    heading.style.cssText =
+      "display:block;" +
+      "font-family:Arial,sans-serif;" +
+      "font-size:20px;" +
+      "font-weight:700;" +
+      "line-height:1.3;" +
+      "margin:0 0 10px 0;" +
+      "padding:0;" +
+      "color:#222;";
+
+
+    box.appendChild(
+      heading
     );
 
 
-    /* =========================================================
-       PYTHON PREVIEW SAYS IT IS READY
-       ========================================================= */
+    /* ------------------------------------------------------------
+       LOADING MESSAGE
+       ------------------------------------------------------------ */
 
-    window.addEventListener(
-        "message",
-        function (ev) {
-
-            var d =
-                ev.data;
+    var loading =
+      document.createElement(
+        "div"
+      );
 
 
-            if (
-                d &&
-                d.type ===
-                "kanework-preview-ready"
-            ) {
+    loading.id =
+      "kanework-preview-loading";
 
-                send();
-            }
+
+    loading.textContent =
+      "Loading jacket preview...";
+
+
+    loading.style.cssText =
+      "font-family:Arial,sans-serif;" +
+      "font-size:13px;" +
+      "color:#777;" +
+      "margin:0 0 6px 0;";
+
+
+    box.appendChild(
+      loading
+    );
+
+
+    /* ------------------------------------------------------------
+       IFRAME
+       ------------------------------------------------------------ */
+
+    var iframe =
+      document.createElement(
+        "iframe"
+      );
+
+
+    iframe.id =
+      "kanework-preview-frame";
+
+
+    iframe.src =
+      PREVIEW_URL;
+
+
+    iframe.title =
+      "Live Jacket Preview";
+
+
+    iframe.loading =
+      "eager";
+
+
+    iframe.setAttribute(
+      "scrolling",
+      "no"
+    );
+
+
+    iframe.style.cssText =
+      "display:block;" +
+      "box-sizing:border-box;" +
+      "width:100%;" +
+      "min-height:760px;" +
+      "height:760px;" +
+      "margin:0;" +
+      "padding:0;" +
+      "border:1px solid #ddd;" +
+      "border-radius:4px;" +
+      "background:#fff;";
+
+
+    iframe.addEventListener(
+      "load",
+      function () {
+
+        var msg =
+          document.getElementById(
+            "kanework-preview-loading"
+          );
+
+
+        if (msg) {
+
+          msg.style.display =
+            "none";
         }
+
+
+        setTimeout(
+          send,
+          100
+        );
+      }
     );
 
 
-    /* =========================================================
-       ECWID PAGE LOADED
-       ========================================================= */
+    box.appendChild(
+      iframe
+    );
 
-    function startPreview() {
 
-        /*
-         Multiple attempts are intentional.
+    /* ------------------------------------------------------------
+       INSERT PREVIEW
+       ------------------------------------------------------------ */
 
-         Ecwid can render the product shell first and
-         inject the options later.
-        */
+    if (
+      destination.type ===
+      "after"
+    ) {
 
-        setTimeout(
-            function () {
-
-                ensureFrame();
-                send();
-
-            },
-            250
+      destination.node
+        .parentNode
+        .insertBefore(
+          box,
+          destination.node
+            .nextSibling
         );
 
+    } else {
 
-        setTimeout(
-            function () {
-
-                ensureFrame();
-                send();
-
-            },
-            750
-        );
-
-
-        setTimeout(
-            function () {
-
-                ensureFrame();
-                send();
-
-            },
-            1500
-        );
-
-
-        setTimeout(
-            function () {
-
-                ensureFrame();
-                send();
-
-            },
-            3000
+      destination.node
+        .appendChild(
+          box
         );
     }
 
 
     if (
-        window.Ecwid &&
-        Ecwid.OnPageLoaded
+      KWP_DEBUG
     ) {
 
-        Ecwid.OnPageLoaded.add(
-            function () {
-
-                startPreview();
-            }
-        );
-
-    } else {
-
-        if (
-            document.readyState ===
-            "loading"
-        ) {
-
-            document.addEventListener(
-                "DOMContentLoaded",
-                function () {
-
-                    startPreview();
-                }
-            );
-
-        } else {
-
-            startPreview();
-        }
+      console.log(
+        "[Kanework] Live Jacket Preview inserted."
+      );
     }
 
 
-    /* =========================================================
-       ECWID SINGLE-PAGE APP WATCHER
-       ========================================================= */
+    return iframe;
+  }
 
-    var domTimer = null;
+
+  /* ============================================================
+     SEND PRODUCT OPTIONS TO PREVIEW
+     ============================================================ */
+
+  function send() {
+
+    try {
+
+      autoFill();
+
+    } catch (e) {
+
+      if (
+        KWP_DEBUG
+      ) {
+
+        console.log(
+          "[Kanework] autofill failed",
+          e
+        );
+      }
+    }
+
+
+    var f =
+      ensureFrame();
+
+
+    if (
+      !f ||
+      !f.contentWindow
+    ) {
+
+      return;
+    }
+
+
+    var values =
+      collect();
+
+
+    if (
+      KWP_DEBUG
+    ) {
+
+      console.log(
+        "[Kanework] sending",
+        values
+      );
+    }
+
+
+    /*
+      Small visible version/readout.
+
+      This lets us tell whether Ecwid loaded the new bridge
+      and whether the jacket field is being read.
+    */
+
+    try {
+
+      var tag =
+        document.getElementById(
+          "kwp-readout"
+        );
+
+
+      if (!tag) {
+
+        tag =
+          document.createElement(
+            "div"
+          );
+
+
+        tag.id =
+          "kwp-readout";
+
+
+        tag.style.cssText =
+          "font:11px system-ui,sans-serif;" +
+          "color:#999;" +
+          "margin:4px 0;";
+
+
+        var fr =
+          frame();
+
+
+        if (
+          fr &&
+          fr.parentNode
+        ) {
+
+          fr.parentNode
+            .insertBefore(
+              tag,
+              fr
+            );
+        }
+      }
+
+
+      tag.textContent =
+        "preview v4 - jacket: " +
+        (
+          values.jacket ||
+          "(none read)"
+        );
+
+
+    } catch (e) {}
 
 
     try {
 
-        new MutationObserver(
-            function () {
+      f.contentWindow
+        .postMessage(
 
-                clearTimeout(
-                    domTimer
-                );
+          {
+            type:
+              "kanework-preview",
 
+            values:
+              values
+          },
 
-                domTimer =
-                    setTimeout(
-                        function () {
-
-                            if (
-                                isProductPage()
-                            ) {
-
-                                ensureFrame();
-                                schedule(50);
-                            }
-
-                        },
-                        250
-                    );
-            }
-        )
-        .observe(
-            document.documentElement,
-            {
-                childList: true,
-                subtree: true
-            }
+          "*"
         );
+
 
     } catch (e) {
 
-        if (KWP_DEBUG) {
+      if (
+        KWP_DEBUG
+      ) {
 
-            console.log(
-                "[Kanework] " +
-                "MutationObserver failed:",
-                e
-            );
-        }
+        console.log(
+          "[Kanework] send failed",
+          e
+        );
+      }
     }
+  }
 
 
-    /* =========================================================
-       EXTRA STARTUP FALLBACK
-       ========================================================= */
+  /* ============================================================
+     DEBOUNCE
+     ============================================================ */
 
-    window.addEventListener(
-        "load",
+  var timer =
+    null;
+
+
+  function schedule(wait) {
+
+    clearTimeout(
+      timer
+    );
+
+
+    timer =
+      setTimeout(
+        send,
+
+        wait === undefined
+          ? 300
+          : wait
+      );
+  }
+
+
+  /* ============================================================
+     WATCH CUSTOMER CHANGES
+     ============================================================ */
+
+  document.addEventListener(
+    "input",
+
+    function () {
+
+      schedule(150);
+    },
+
+    true
+  );
+
+
+  document.addEventListener(
+    "change",
+
+    function () {
+
+      schedule(150);
+    },
+
+    true
+  );
+
+
+  /* ============================================================
+     PREVIEW READY MESSAGE
+     ============================================================ */
+
+  window.addEventListener(
+    "message",
+
+    function (ev) {
+
+      var d =
+        ev.data;
+
+
+      if (
+        d &&
+        d.type ===
+          "kanework-preview-ready"
+      ) {
+
+        send();
+      }
+    }
+  );
+
+
+  /* ============================================================
+     START PREVIEW
+     ============================================================ */
+
+  function startPreview() {
+
+    /*
+      Ecwid can load the product shell before the options.
+
+      Multiple attempts make sure the preview appears once
+      the product page is actually ready.
+    */
+
+
+    setTimeout(
+      function () {
+
+        ensureFrame();
+
+        send();
+      },
+
+      250
+    );
+
+
+    setTimeout(
+      function () {
+
+        ensureFrame();
+
+        send();
+      },
+
+      750
+    );
+
+
+    setTimeout(
+      function () {
+
+        ensureFrame();
+
+        send();
+      },
+
+      1500
+    );
+
+
+    setTimeout(
+      function () {
+
+        ensureFrame();
+
+        send();
+      },
+
+      3000
+    );
+  }
+
+
+  /* ============================================================
+     ECWID PAGE LOADED
+     ============================================================ */
+
+  if (
+    window.Ecwid &&
+    Ecwid.OnPageLoaded
+  ) {
+
+    Ecwid.OnPageLoaded.add(
+      function () {
+
+        startPreview();
+      }
+    );
+
+  } else {
+
+    if (
+      document.readyState ===
+      "loading"
+    ) {
+
+      document.addEventListener(
+        "DOMContentLoaded",
+
         function () {
 
-            setTimeout(
-                function () {
-
-                    ensureFrame();
-                    send();
-
-                },
-                500
-            );
+          startPreview();
         }
-    );
+      );
+
+    } else {
+
+      startPreview();
+    }
+  }
+
+
+  /* ============================================================
+     ECWID SINGLE PAGE APP WATCHER
+     ============================================================ */
+
+  var domTimer =
+    null;
+
+
+  try {
+
+    new MutationObserver(
+      function () {
+
+        clearTimeout(
+          domTimer
+        );
+
+
+        domTimer =
+          setTimeout(
+            function () {
+
+              if (
+                isProductPage()
+              ) {
+
+                ensureFrame();
+
+                schedule(50);
+              }
+
+            },
+
+            250
+          );
+      }
+    )
+      .observe(
+
+        document.documentElement,
+
+        {
+          childList: true,
+          subtree: true
+        }
+      );
+
+
+  } catch (e) {
+
+    if (
+      KWP_DEBUG
+    ) {
+
+      console.log(
+        "[Kanework] MutationObserver failed",
+        e
+      );
+    }
+  }
+
+
+  /* ============================================================
+     FINAL STARTUP FALLBACK
+     ============================================================ */
+
+  window.addEventListener(
+    "load",
+
+    function () {
+
+      setTimeout(
+        function () {
+
+          ensureFrame();
+
+          send();
+        },
+
+        500
+      );
+    }
+  );
 
 
 })();
