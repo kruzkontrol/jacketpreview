@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kanework Fonts</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#15171a;color:#e9e6e1;
+font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px}
+.wrap{max-width:400px;margin:0 auto;padding:56px 20px 80px}
+h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:#6c737c;font-size:13px;margin-bottom:30px;line-height:1.6}
+.card{background:#1a1d21;border:1px solid #262a30;border-radius:14px;padding:22px}
+label{display:block;font-size:12px;color:#6c737c;margin:14px 0 6px}
+label:first-child{margin-top:0}
+input{width:100%;background:#1e2126;border:1px solid #343941;color:#f3f0eb;
+border-radius:9px;padding:13px 14px;font-size:15px;outline:none;font-family:inherit}
+input:focus{border-color:#c9a227;box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+button.go{width:100%;margin-top:20px;background:#c9a227;border:none;color:#15171a;
+border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer}
+button.go:disabled{opacity:.5;cursor:not-allowed}
+.alt{text-align:center;margin-top:18px;font-size:13px;color:#6c737c}
+.alt a{color:#c9a227;text-decoration:none;font-weight:600;cursor:pointer}
+.msg{margin-top:16px;padding:11px 13px;border-radius:9px;font-size:13px;line-height:1.55;display:none}
+.msg.err{background:#2e1a1a;border:1px solid #4a2424;color:#e08f8f;display:block}
+.msg.ok{background:#16251a;border:1px solid #24422c;color:#7dc48f;display:block}
+.plan{margin-top:22px;font-size:12px;color:#5b626b;line-height:1.8;text-align:center}
+.plan b{color:#9aa0a8}
+#app{display:none}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.who{font-size:13px;color:#6c737c}
+.out{background:none;border:none;color:#6c737c;font-size:13px;cursor:pointer;padding:4px}
+.stat{display:flex;gap:10px;margin-bottom:18px}
+.stat div{flex:1;background:#1a1d21;border:1px solid #262a30;border-radius:11px;padding:13px}
+.stat b{display:block;font-size:20px;color:#f0ece5;font-weight:700}
+.stat span{font-size:11px;color:#6c737c}
+.h2{font-size:13px;font-weight:700;color:#c9a227;letter-spacing:.05em;
+text-transform:uppercase;margin-bottom:12px}
+ol{margin:0;padding-left:20px;line-height:1.8;color:#a8aeb6;font-size:14px}
+ol b{color:#e9e6e1}
+.tmpl{display:flex;gap:10px;align-items:flex-start;margin:12px 0}
+code{flex:1;background:#101215;border:1px solid #2a2f36;border-radius:8px;padding:11px 12px;
+font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;white-space:pre-wrap;
+word-break:break-all;color:#d8d4cd;line-height:1.9}
+.ghost{background:#1e2126;border:1px solid #343941;color:#c8ccd1;border-radius:9px;
+padding:10px 15px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.hint{font-size:12px;color:#5b626b;margin-top:12px;line-height:1.65}
+#drop{border:2px dashed #3a4048;border-radius:12px;padding:30px 18px;text-align:center;
+color:#6c737c;cursor:pointer;font-size:14px;transition:.15s}
+#drop.hot{border-color:#c9a227;background:#1e2026;color:#c9a227}
+.f{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid #24282e}
+.fn{flex:1;font-weight:600;font-size:14px;min-width:0;overflow:hidden;
+text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;letter-spacing:.04em}
+.ok{background:#14361f;color:#5bc47c}.hold{background:#3d2a16;color:#e0a45f}
+.x{background:none;border:none;color:#5b626b;cursor:pointer;font-size:18px;padding:0 4px}
+.why{background:#241a12;border:1px solid #4a341f;color:#e0a45f;border-radius:9px;
+padding:11px 13px;font-size:12.5px;line-height:1.6;margin:2px 0 10px}
+.why button{margin-top:9px;background:#c9a227;border:none;color:#15171a;border-radius:7px;
+padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px;margin:8px 0 10px}
+.cell{background:#101215;border:1px solid #2a2f36;border-radius:6px;padding:3px;text-align:center}
+.cell svg{width:100%;height:26px;overflow:visible}
+.cell i{font-style:normal;font-size:10px;color:#c9a227;font-weight:700}
+.cell{cursor:pointer;transition:.1s}
+.cell.off{opacity:.3;border-color:#7a3030;background:#241414}
+.cell.off i{color:#c86b6b;text-decoration:line-through}
+.tip{font-size:11.5px;color:#a8875a;margin:8px 0 4px;line-height:1.55}
+.why button[disabled]{opacity:.4;cursor:not-allowed}
+.alt2{background:#1e2126!important;border:1px solid #4a341f!important;color:#c8a76b!important}
+.fixed{background:#14261a;border:1px solid #234a2c;color:#7dc48f;border-radius:9px;
+padding:9px 12px;font-size:12px;line-height:1.55;margin:2px 0 10px}
+</style></head><body>
+<div class="wrap">
+
+<div id="gate">
+  <h1>Kanework Fonts</h1>
+  <div class="sub">Turn your embroidery alphabets into a page your customers
+   can type their name into.</div>
+  <div class="card">
+    <div id="nameRow" style="display:none">
+      <label>Business name</label>
+      <input id="biz" placeholder="Smith Embroidery" autocomplete="organization">
+    </div>
+    <label>Email</label>
+    <input id="em" type="email" autocomplete="email" placeholder="you@shop.com">
+    <label>Password</label>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+    <button class="go" id="go">Sign in</button>
+    <div class="msg" id="msg"></div>
+    <div class="alt"><span id="altText">No account yet? </span><a id="swap">Create one</a></div>
+    <div class="alt" style="margin-top:10px"><a id="forgot">Forgot password</a></div>
+  </div>
+  <div class="plan"><b>$20 a year</b> &middot; 3 fonts included<br>
+   Extra fonts $3 each, or 5 for $10</div>
+</div>
+
+<div id="app">
+  <div class="top">
+    <div><h1 style="font-size:18px;margin:0" id="bizName"></h1>
+     <div class="who" id="who"></div></div>
+    <button class="out" id="out">Sign out</button>
+  </div>
+  <div class="stat">
+    <div><b id="nFonts">0</b><span>fonts loaded</span></div>
+    <div><b id="nLimit">3</b><span>room for</span></div>
+    <div><b id="nStatus">—</b><span>account</span></div>
+  </div>
+  <div class="card">
+    <div class="h2">1 &mdash; Export your alphabets</div>
+    <ol>
+      <li>Open your embroidery software and pick a font</li>
+      <li>Paste this <b>exactly</b> &mdash; four lines, and the spaces matter:</li>
+    </ol>
+    <div class="tmpl"><code id="tp"></code><button class="ghost" id="cp">Copy</button></div>
+    <ol start="3">
+      <li>Set it about <b>1 inch</b> tall, keeping the four lines</li>
+      <li>Turn <b>trims between letters</b> on, or the letters run together</li>
+      <li>Save as <b>DST</b>, named after the font &mdash; <b>Brush Script.dst</b></li>
+    </ol>
+    <div class="hint">No lowercase in the font? Leave that row out. If a punctuation
+     mark is missing from your font, drop it from the row rather than letting the
+     software substitute something.</div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="h2">2 &mdash; Drop the files here</div>
+    <div id="drop">Drag .dst files in, or click to choose
+      <input type="file" id="fi" multiple accept=".dst,.DST" hidden></div>
+    <div id="list"></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="h2">3 &mdash; Your page</div>
+    <div class="sub" style="margin:0 0 14px">Builds one file with your fonts inside.
+     Put it on your website, or open it on a tablet in the shop.</div>
+    <button class="go" id="mk" style="margin:0">Build my page</button>
+  </div>
+</div>
+
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+        signOut, onAuthStateChanged, sendPasswordResetEmail}
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp}
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFunctions, httpsCallable}
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD9H7DTcviYoo8xg9s4ucw6WxngezKq5Ao",
+  authDomain: "kanework-fonts.firebaseapp.com",
+  projectId: "kanework-fonts",
+  storageBucket: "kanework-fonts.firebasestorage.app",
+  messagingSenderId: "1005359915955",
+  appId: "1:1005359915955:web:9ae5cb0f71b7502bc321c6"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const fns = getFunctions(app);
+const addFont     = httpsCallable(fns, "addFont");
+const confirmFont = httpsCallable(fns, "confirmFont");
+const deleteFont  = httpsCallable(fns, "deleteFont");
+const buildViewer = httpsCallable(fns, "buildViewer");
+
+const INCLUDED_FONTS = 3;
+let mode = "in";                       // "in" or "up"
+
+const $ = id => document.getElementById(id);
+function say(text, kind){ const m=$("msg"); m.textContent=text;
+  m.className = text ? "msg "+(kind||"err") : "msg"; }
+
+function setMode(m){
+  mode = m;
+  $("nameRow").style.display = m === "up" ? "block" : "none";
+  $("go").textContent      = m === "up" ? "Create account" : "Sign in";
+  $("altText").textContent = m === "up" ? "Already have one? " : "No account yet? ";
+  $("swap").textContent    = m === "up" ? "Sign in" : "Create one";
+  $("pw").autocomplete     = m === "up" ? "new-password" : "current-password";
+  say("");
+}
+$("swap").onclick = () => setMode(mode === "in" ? "up" : "in");
+
+$("forgot").onclick = async () => {
+  const email = $("em").value.trim();
+  if (!email) return say("Type your email first, then press Forgot password.");
+  try { await sendPasswordResetEmail(auth, email);
+        say("Reset link sent. Check your email.", "ok"); }
+  catch (e) { say(pretty(e)); }
+};
+
+$("go").onclick = async () => {
+  const email = $("em").value.trim(), pw = $("pw").value;
+  if (!email || !pw) return say("Email and password are both needed.");
+  $("go").disabled = true; say("");
+  try {
+    if (mode === "up") {
+      const biz = $("biz").value.trim();
+      if (!biz) { $("go").disabled=false; return say("What is the business called?"); }
+      const cred = await createUserWithEmailAndPassword(auth, email, pw);
+      await setDoc(doc(db, "accounts", cred.user.uid), {
+        email, business: biz,
+        status: "pending",          // becomes active once the $20 is paid
+        extraFonts: 0,
+        createdAt: serverTimestamp(),
+        settings: {business: biz, phone: "", base: 8, included: 3000, per: 2}
+      });
+    } else {
+      await signInWithEmailAndPassword(auth, email, pw);
+    }
+  } catch (e) { say(pretty(e)); $("go").disabled = false; }
+};
+
+$("out").onclick = () => signOut(auth);
+
+function pretty(e){
+  const c = (e && e.code) || "";
+  if (c.includes("invalid-credential") || c.includes("wrong-password"))
+    return "That email and password do not match.";
+  if (c.includes("user-not-found")) return "No account with that email.";
+  if (c.includes("email-already-in-use")) return "That email already has an account. Sign in instead.";
+  if (c.includes("weak-password")) return "Password needs at least 6 characters.";
+  if (c.includes("invalid-email")) return "That does not look like an email address.";
+  if (c.includes("too-many-requests")) return "Too many tries. Wait a minute and try again.";
+  if (c.includes("network")) return "Cannot reach the server. Check your connection.";
+  return (e && e.message) || "Something went wrong.";
+}
+
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    $("gate").style.display = "block"; $("app").style.display = "none";
+    $("go").disabled = false; $("pw").value = "";
+    return;
+  }
+  $("gate").style.display = "none"; $("app").style.display = "block";
+  const snap = await getDoc(doc(db, "accounts", user.uid));
+  const a = snap.exists() ? snap.data() : {};
+  $("bizName").textContent = a.business || "Your shop";
+  $("who").textContent = user.email;
+  $("nStatus").textContent = a.status === "active" ? "Active" : "Pending";
+  $("nLimit").textContent = INCLUDED_FONTS + (a.extraFonts || 0);
+  await loadFonts();
+});
+
+/* ---------------- fonts ---------------- */
+const ROWS = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz",
+              "0123456789","&.,'-!?#$@()"];
+$("tp").textContent = ROWS.map(r => r.split("").join(" ")).join("\n");
+$("cp").onclick = () => {
+  navigator.clipboard.writeText($("tp").textContent);
+  $("cp").textContent = "Copied"; setTimeout(()=>$("cp").textContent="Copy", 1400);
+};
+
+let fonts = [];            // what the account holds right now
+
+const drop = $("drop"), fi = $("fi");
+drop.onclick = () => fi.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("hot"); };
+drop.ondragleave = () => drop.classList.remove("hot");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("hot"); take(e.dataTransfer.files); };
+fi.onchange = e => take(e.target.files);
+
+function readB64(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(",")[1]);
+    r.onerror = () => rej(new Error("Could not read that file."));
+    r.readAsDataURL(file);
+  });
+}
+
+async function take(files){
+  for (const file of files) {
+    if (!/\.dst$/i.test(file.name)) continue;
+    const name = file.name.replace(/\.dst$/i, "").replace(/[_-]+/g, " ").trim();
+    setRow(name, "working", "Reading\u2026");
+    try {
+      const b64 = await readB64(file);
+      raw[name] = b64;
+      const {data} = await addFont({name, dstBase64: b64});
+      upsert(data);
+    } catch (e) {
+      setRow(name, "error", (e && e.message) || "That did not work.");
+    }
+  }
+  await loadFonts();
+}
+
+const pending = {};
+function setRow(name, state, note){ pending[name] = {name, state, note}; paintList(); }
+function upsert(d){ delete pending[d.name]; previews[d.name] = d.preview; paintList(); }
+
+const previews = {};
+const raw = {};        // the uploaded file, kept so a repair can resend it
+const marked = {};     // cells the shop ticked as junk, per font
+
+function esc(c){return c===' '?'&nbsp;':c.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function glyphSvg(pts){
+  if (!pts || pts.length < 2) return "";
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  for (const p of pts){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0];
+                        if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; }
+  const d = "M" + pts.map(p => p[0] + " " + (y1 - p[1] + y0)).join("L");
+  const pad = 6;
+  return '<svg viewBox="'+(x0-pad)+' '+(y0-pad)+' '+(x1-x0+pad*2)+' '+(y1-y0+pad*2)+
+         '" preserveAspectRatio="xMidYMid meet"><path d="'+d+
+         '" fill="none" stroke="#e9e6e1" stroke-width="3"/></svg>';
+}
+
+function paintList(){
+  const rows = [];
+  for (const f of fonts) {
+    const held = f.held;
+    rows.push('<div class="f"><span class="fn">'+f.name+'</span>'+
+      (f.caps_only ? '<span class="tag hold">CAPS</span>' : '') +
+      '<span class="tag '+(held?'hold':'ok')+'">'+(held?'check it':'ready')+'</span>'+
+      '<button class="x" data-del="'+f.name+'">&times;</button></div>');
+    if (!held && f.notes && f.notes.length)
+      rows.push('<div class="fixed">'+f.notes.join(" ")+'</div>');
+    if (held) {
+      const pv = previews[f.name];
+      const mk = marked[f.name] || new Set();
+      let cells = "";
+      if (pv) {
+        cells = '<div class="grid">' + Object.keys(pv).map(i => {
+          const c = pv[i];
+          return '<div class="cell'+(mk.has(+i)?' off':'')+'" data-cell="'+f.name+'|'+i+'">'+
+                 glyphSvg(c.p)+'<i>'+esc(c.ch)+'</i></div>';
+        }).join("") + '</div>';
+      }
+      rows.push('<div class="why">'+(f.trouble || "This one needs a look.")+
+        '<div class="tip">Tap any shape that is not part of the alphabet, then Fix. '+
+        'Everything after it shifts back into place.</div>'+
+        cells +
+        '<button data-fix="'+f.name+'"'+(mk.size?'':' disabled')+'>Fix ('+mk.size+' removed)</button> '+
+        '<button class="alt2" data-ok="'+f.name+'">Looks right, use it</button>'+
+        '</div>');
+    }
+  }
+  for (const k in pending) {
+    const p = pending[k];
+    rows.push('<div class="f"><span class="fn">'+p.name+'</span>'+
+      '<span class="tag '+(p.state==="error"?"hold":"ok")+'">'+p.note+'</span></div>');
+  }
+  $("list").innerHTML = rows.join("");
+  $("list").querySelectorAll("[data-cell]").forEach(c => c.onclick = () => {
+    const [fn, i] = c.dataset.cell.split("|");
+    marked[fn] = marked[fn] || new Set();
+    marked[fn].has(+i) ? marked[fn].delete(+i) : marked[fn].add(+i);
+    paintList();
+  });
+  $("list").querySelectorAll("[data-fix]").forEach(b => b.onclick = async () => {
+    const fn = b.dataset.fix;
+    b.disabled = true; b.textContent = "Fixing\u2026";
+    try {
+      const {data} = await addFont({name: fn, dstBase64: raw[fn],
+                                    drop: [...(marked[fn] || [])]});
+      marked[fn] = new Set();
+      upsert(data);
+    } catch (e) { alert((e && e.message) || "Could not fix that one."); }
+    await loadFonts();
+  });
+  $("list").querySelectorAll("[data-ok]").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    await confirmFont({name: b.dataset.ok});
+    await loadFonts();
+  });
+  $("list").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    if (!confirm("Remove " + b.dataset.del + "?")) return;
+    await deleteFont({name: b.dataset.del});
+    await loadFonts();
+  });
+}
+
+async function loadFonts(){
+  const u = auth.currentUser; if (!u) return;
+  const snap = await getDocs(collection(db, "accounts", u.uid, "fonts"));
+  fonts = snap.docs.map(d => d.data());
+  $("nFonts").textContent = fonts.filter(f => !f.held).length;
+  paintList();
+}
+
+$("mk").onclick = async () => {
+  $("mk").disabled = true; $("mk").textContent = "Building\u2026";
+  try {
+    const {data} = await buildViewer();
+    const n = Object.keys(data.fonts).length;
+    if (!n) { alert("No fonts ready yet."); }
+    else {
+      const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = (data.settings.business || "fonts").toLowerCase()
+                     .replace(/[^a-z0-9]+/g, "-") + "-fonts.json";
+      a.click();
+    }
+  } catch (e) { alert((e && e.message) || "Could not build."); }
+  $("mk").disabled = false; $("mk").textContent = "Build my page";
+};
+
+if (location.hash === "#up") setMode("up");
+</script>
+</body></html>
