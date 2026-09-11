@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kanework Fonts</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#15171a;color:#e9e6e1;
+font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px}
+.wrap{max-width:400px;margin:0 auto;padding:56px 20px 80px}
+h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:#6c737c;font-size:13px;margin-bottom:30px;line-height:1.6}
+.card{background:#1a1d21;border:1px solid #262a30;border-radius:14px;padding:22px}
+label{display:block;font-size:12px;color:#6c737c;margin:14px 0 6px}
+label:first-child{margin-top:0}
+input{width:100%;background:#1e2126;border:1px solid #343941;color:#f3f0eb;
+border-radius:9px;padding:13px 14px;font-size:15px;outline:none;font-family:inherit}
+input:focus{border-color:#c9a227;box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+button.go{width:100%;margin-top:20px;background:#c9a227;border:none;color:#15171a;
+border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer}
+button.go:disabled{opacity:.5;cursor:not-allowed}
+.alt{text-align:center;margin-top:18px;font-size:13px;color:#6c737c}
+.alt a{color:#c9a227;text-decoration:none;font-weight:600;cursor:pointer}
+.msg{margin-top:16px;padding:11px 13px;border-radius:9px;font-size:13px;line-height:1.55;display:none}
+.msg.err{background:#2e1a1a;border:1px solid #4a2424;color:#e08f8f;display:block}
+.msg.ok{background:#16251a;border:1px solid #24422c;color:#7dc48f;display:block}
+.plan{margin-top:22px;font-size:12px;color:#5b626b;line-height:1.8;text-align:center}
+.plan b{color:#9aa0a8}
+#app{display:none}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.who{font-size:13px;color:#6c737c}
+.out{background:none;border:none;color:#6c737c;font-size:13px;cursor:pointer;padding:4px}
+.stat{display:flex;gap:10px;margin-bottom:18px}
+.stat div{flex:1;background:#1a1d21;border:1px solid #262a30;border-radius:11px;padding:13px}
+.stat b{display:block;font-size:20px;color:#f0ece5;font-weight:700}
+.stat span{font-size:11px;color:#6c737c}
+</style></head><body>
+<div class="wrap">
+
+<div id="gate">
+  <h1>Kanework Fonts</h1>
+  <div class="sub">Turn your embroidery alphabets into a page your customers
+   can type their name into.</div>
+  <div class="card">
+    <div id="nameRow" style="display:none">
+      <label>Business name</label>
+      <input id="biz" placeholder="Smith Embroidery" autocomplete="organization">
+    </div>
+    <label>Email</label>
+    <input id="em" type="email" autocomplete="email" placeholder="you@shop.com">
+    <label>Password</label>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+    <button class="go" id="go">Sign in</button>
+    <div class="msg" id="msg"></div>
+    <div class="alt"><span id="altText">No account yet? </span><a id="swap">Create one</a></div>
+    <div class="alt" style="margin-top:10px"><a id="forgot">Forgot password</a></div>
+  </div>
+  <div class="plan"><b>$20 a year</b> &middot; 3 fonts included<br>
+   Extra fonts $3 each, or 5 for $10</div>
+</div>
+
+<div id="app">
+  <div class="top">
+    <div><h1 style="font-size:18px;margin:0" id="bizName"></h1>
+     <div class="who" id="who"></div></div>
+    <button class="out" id="out">Sign out</button>
+  </div>
+  <div class="stat">
+    <div><b id="nFonts">0</b><span>fonts loaded</span></div>
+    <div><b id="nLimit">3</b><span>room for</span></div>
+    <div><b id="nStatus">—</b><span>account</span></div>
+  </div>
+  <div class="card"><div class="sub" style="margin:0">
+   Signed in. Font upload comes next.</div></div>
+</div>
+
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+        signOut, onAuthStateChanged, sendPasswordResetEmail}
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp}
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD9H7DTcviYoo8xg9s4ucw6WxngezKq5Ao",
+  authDomain: "kanework-fonts.firebaseapp.com",
+  projectId: "kanework-fonts",
+  storageBucket: "kanework-fonts.firebasestorage.app",
+  messagingSenderId: "1005359915955",
+  appId: "1:1005359915955:web:9ae5cb0f71b7502bc321c6"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const INCLUDED_FONTS = 3;
+let mode = "in";                       // "in" or "up"
+
+const $ = id => document.getElementById(id);
+function say(text, kind){ const m=$("msg"); m.textContent=text;
+  m.className = text ? "msg "+(kind||"err") : "msg"; }
+
+function setMode(m){
+  mode = m;
+  $("nameRow").style.display = m === "up" ? "block" : "none";
+  $("go").textContent      = m === "up" ? "Create account" : "Sign in";
+  $("altText").textContent = m === "up" ? "Already have one? " : "No account yet? ";
+  $("swap").textContent    = m === "up" ? "Sign in" : "Create one";
+  $("pw").autocomplete     = m === "up" ? "new-password" : "current-password";
+  say("");
+}
+$("swap").onclick = () => setMode(mode === "in" ? "up" : "in");
+
+$("forgot").onclick = async () => {
+  const email = $("em").value.trim();
+  if (!email) return say("Type your email first, then press Forgot password.");
+  try { await sendPasswordResetEmail(auth, email);
+        say("Reset link sent. Check your email.", "ok"); }
+  catch (e) { say(pretty(e)); }
+};
+
+$("go").onclick = async () => {
+  const email = $("em").value.trim(), pw = $("pw").value;
+  if (!email || !pw) return say("Email and password are both needed.");
+  $("go").disabled = true; say("");
+  try {
+    if (mode === "up") {
+      const biz = $("biz").value.trim();
+      if (!biz) { $("go").disabled=false; return say("What is the business called?"); }
+      const cred = await createUserWithEmailAndPassword(auth, email, pw);
+      await setDoc(doc(db, "accounts", cred.user.uid), {
+        email, business: biz,
+        status: "pending",          // becomes active once the $20 is paid
+        extraFonts: 0,
+        createdAt: serverTimestamp(),
+        settings: {business: biz, phone: "", base: 8, included: 3000, per: 2}
+      });
+    } else {
+      await signInWithEmailAndPassword(auth, email, pw);
+    }
+  } catch (e) { say(pretty(e)); $("go").disabled = false; }
+};
+
+$("out").onclick = () => signOut(auth);
+
+function pretty(e){
+  const c = (e && e.code) || "";
+  if (c.includes("invalid-credential") || c.includes("wrong-password"))
+    return "That email and password do not match.";
+  if (c.includes("user-not-found")) return "No account with that email.";
+  if (c.includes("email-already-in-use")) return "That email already has an account. Sign in instead.";
+  if (c.includes("weak-password")) return "Password needs at least 6 characters.";
+  if (c.includes("invalid-email")) return "That does not look like an email address.";
+  if (c.includes("too-many-requests")) return "Too many tries. Wait a minute and try again.";
+  if (c.includes("network")) return "Cannot reach the server. Check your connection.";
+  return (e && e.message) || "Something went wrong.";
+}
+
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    $("gate").style.display = "block"; $("app").style.display = "none";
+    $("go").disabled = false; $("pw").value = "";
+    return;
+  }
+  $("gate").style.display = "none"; $("app").style.display = "block";
+  const snap = await getDoc(doc(db, "accounts", user.uid));
+  const a = snap.exists() ? snap.data() : {};
+  $("bizName").textContent = a.business || "Your shop";
+  $("who").textContent = user.email;
+  $("nStatus").textContent = a.status === "active" ? "Active" : "Pending";
+  $("nLimit").textContent = INCLUDED_FONTS + (a.extraFonts || 0);
+  const fonts = await getDocs(collection(db, "accounts", user.uid, "fonts"));
+  $("nFonts").textContent = fonts.size;
+});
+
+if (location.hash === "#up") setMode("up");
+</script>
+</body></html>
