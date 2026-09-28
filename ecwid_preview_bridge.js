@@ -362,6 +362,26 @@
   }
 
   function fieldFor(el) {
+    // Ecwid can wrap the custom text box together with neighbouring
+    // options. Prefer its own label before scanning the shared wrapper.
+    if (el.type === "text" || el.tagName === "TEXTAREA") {
+      var ownLabels = [];
+      if (el.id) {
+        var ownLabel = document.querySelector('label[for="' +
+          el.id.replace(/"/g, '\\"') + '"]');
+        if (ownLabel) ownLabels.push(ownLabel.textContent || "");
+      }
+      if (el.closest) {
+        var enclosing = el.closest("label");
+        if (enclosing) ownLabels.push(enclosing.textContent || "");
+      }
+      ownLabels.push(el.getAttribute("aria-label") || "");
+      ownLabels.push(el.getAttribute("placeholder") || "");
+      for (var labelIndex = 0; labelIndex < ownLabels.length; labelIndex++) {
+        if (norm(ownLabels[labelIndex]).indexOf("OTHER ORG") !== -1)
+          return "other_org";
+      }
+    }
     // A radio whose OWN value/label is GREEK LETTERS or NORMAL TEXT is
     // always the chapter Greek/Normal switch, wherever it sits. Decide
     // it here, before the label-chain match - on the bag it sits next
@@ -645,38 +665,6 @@
     return null;   // no pasted iframe on this page - nothing to do
   }
 
-  // ---- custom "Other org" letters: draw via the frame's URL ----------
-  // When a customer types their OWN Greek letters (Organisation = OTHER
-  // plus text in "Other org."), the background message path has proven
-  // unreliable - the frame receives the letters but never draws them. So
-  // for THAT one case we drive the frame by its URL instead: the server
-  // draws the letters directly, exactly as it does when the address is
-  // opened by hand, and a fresh src also dodges any stale cached frame.
-  // Normal orders keep the flash-free message path untouched.
-  var lastFrameURL = "";
-  var frameDriven = false;
-
-  function baseSrc() {
-    return "https://" + PREVIEW_HOST + "/";
-  }
-
-  function fullFrameURL(values) {
-    var qs = [];
-    for (var k in values) {
-      if (!values.hasOwnProperty(k)) continue;
-      if (k === "centre_image") continue;        // too big for a URL
-      var v = values[k];
-      if (v === "" || v === null || v === undefined) continue;
-      qs.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
-    }
-    // Point the frame at the IMAGE endpoint, not the page. The server
-    // draws the picture straight from these params - the exact address
-    // that draws the letters when opened by hand - so it does not depend
-    // on the page's script, its default line name, or a cached copy.
-    return "https://" + PREVIEW_HOST + "/preview"
-           + (qs.length ? "?" + qs.join("&") : "");
-  }
-
   function send() {
     // Set the store's own dropdowns FIRST, so the picture and the order
     // agree - the values collected below are read after any auto-fill.
@@ -709,37 +697,11 @@
         var fr = frame();
         if (fr && fr.parentNode) fr.parentNode.insertBefore(tag, fr);
       }
-      tag.textContent = "preview v15G"
+      tag.textContent = "preview v15E"
         + " | color: " + (values.jacket || "(none)")
         + " | org: " + (values.front_org || "(none)")
         + " | other_org: " + (values.other_org || "(none)");
     } catch (e) {}
-
-    // ---- OTHER org typed letters: reload the frame from its URL -------
-    // The one case the message path cannot draw. When it is active we
-    // point the frame at the full address (letters included); the server
-    // renders it directly. Only reload when the address actually changes,
-    // so typing pauses do not thrash it, and hand the frame BACK to the
-    // message path the moment the customer leaves the custom org.
-    var customActive =
-      String(values.front_org || "").toUpperCase() === "OTHER" &&
-      String(values.other_org || "").trim() !== "";
-
-    if (customActive) {
-      var url = fullFrameURL(values);
-      if (url !== lastFrameURL) {
-        lastFrameURL = url;
-        frameDriven = true;
-        try { f.setAttribute("src", url); } catch (e) {}
-      }
-      // the reload draws it - skip the message, but still write the
-      // recreate-link below so the order carries it.
-    } else if (frameDriven) {
-      frameDriven = false;
-      lastFrameURL = "";
-      try { f.setAttribute("src", baseSrc()); } catch (e) {}
-      // fall through to the normal message path below
-    }
 
     // Send the values BOTH ways:
     //  1) postMessage - the smooth path, if the iframe acts on it.
@@ -751,7 +713,7 @@
     // the src to force a first draw; that is what caused the flashing,
     // so it is gone. The iframe draws from the ready-handshake below.)
     try {
-      if (!customActive && f.contentWindow) {
+      if (f.contentWindow) {
         f.contentWindow.postMessage(
           { type: "kanework-preview", values: values }, "*");
       }
