@@ -99,7 +99,33 @@ border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
 .sw b.on{border-color:#c9a227}
 .lbl span{color:#a8aeb6;font-weight:600}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.addorder{display:block;width:calc(100% - 32px);margin:14px 16px 4px;padding:16px;border:0;border-radius:12px;background:#1f8a43;color:#fff;font-size:17px;font-weight:700;cursor:pointer}
+.addorder:active{background:#176d35}
+.addorder:disabled{background:#6b7280;cursor:default}
+.aostatus{margin:0 16px 14px;font-size:14px;color:#a8aeb6;min-height:18px;text-align:center}
+.aostatus.ok{color:#36d07a}
+.aostatus.err{color:#ff7a7a}
 </style></head><body>
+<!-- html2canvas: snapshots the picked design card to an image -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Firebase: sends the picked design to the kiosk order form -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  const cfg = {
+    apiKey: "AIzaSyCrRBimKqaMmLCOBnXfW-304yMntZ91Y5Q",
+    authDomain: "greek-kustoms-uploads.firebaseapp.com",
+    projectId: "greek-kustoms-uploads",
+    storageBucket: "greek-kustoms-uploads.firebasestorage.app",
+    messagingSenderId: "389551908449",
+    appId: "1:389551908449:web:8ff2708be36112d1116c20"
+  };
+  const db = getFirestore(initializeApp(cfg));
+  // Called by the "Add to Order" button. Saves one font pick the kiosk pulls.
+  window.fbSavePick = (data) =>
+    addDoc(collection(db, 'fontpicks'), { ...data, createdAt: serverTimestamp() });
+</script>
 <header><h1>Type a name to see it stitched</h1>
 <div class="lines" id="lines"></div>
 <div class="row"><button class="addln" id="addln">+ Add another line</button>
@@ -135,6 +161,8 @@ border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
  <div class="lbl">Thread <span id="tn"></span></div><div class="sw" id="tsw"></div>
  <div class="lbl">On <span id="gn"></span></div><div class="sw" id="gsw"></div>
 </div>
+<button id="addorder" class="addorder">Add to Order &rarr;</button>
+<div id="aostatus" class="aostatus"></div>
 </div><div id="pk"><div class="pkbox">
  <div class="pkq" id="pkq"></div>
  <div class="pkrow" id="pkpick"></div>
@@ -449,4 +477,76 @@ document.getElementById('addln').onclick=()=>{if(LN.length<4){LN.push('');drawLi
  [...document.querySelectorAll('[data-ln]')].pop().focus()}};
 drawLines();
 render();
+
+/* ---- Add to Order: snapshot the picked design + spec and send it to the
+   kiosk order form (customer_with_email.html) through Firebase ---- */
+(function(){
+ const btn=document.getElementById('addorder');
+ const stat=document.getElementById('aostatus');
+ if(!btn)return;
+ // Keep the image under Firestore's ~1MB field limit (same idea as submit.html).
+ function shrink(dataUrl,maxBytes){return new Promise(res=>{
+  if(dataUrl.length<maxBytes)return res(dataUrl);
+  const img=new Image();
+  img.onload=()=>{
+   const draw=(w,q)=>{const c=document.createElement('canvas');const s=w/img.width;
+    c.width=w;c.height=Math.round(img.height*s);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',q)};
+   let w=Math.min(img.width,1400),q=0.85,out=draw(w,q);
+   while(out.length>maxBytes&&(w>500||q>0.5)){if(q>0.5)q-=0.08;else w=Math.round(w*0.85);out=draw(w,q);}
+   res(out);
+  };
+  img.onerror=()=>res(dataUrl); img.src=dataUrl;
+ });}
+ // Trim the empty background below the card so the saved image isn't mostly
+ // black. Cuts at the first LONG empty gap scanning top-down (so a thin strip
+ // at the very bottom edge can't defeat it). Background is sampled live.
+ function trimCanvas(canvas){
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  let d; try{d=ctx.getImageData(0,0,W,H).data;}catch(e){return canvas;}
+  const si=((Math.floor(H*0.7))*W+2)*4;         // a point known to be empty
+  const br=d[si],bg=d[si+1],bb=d[si+2];
+  const rowHas=y=>{for(let x=0;x<W;x+=8){const i=(y*W+x)*4;
+    if(Math.abs(d[i]-br)>14||Math.abs(d[i+1]-bg)>14||Math.abs(d[i+2]-bb)>14)return true;}
+   return false;};
+  let last=0,empty=0; const GAP=140;
+  for(let y=0;y<H;y++){ if(rowHas(y)){last=y;empty=0;}
+   else { empty++; if(empty>GAP&&last>0)break; } }
+  const h=Math.min(H,last+40);
+  const out=document.createElement('canvas');out.width=W;out.height=h;
+  out.getContext('2d').drawImage(canvas,0,0,W,h,0,0,W,h);
+  return out;
+ }
+ btn.onclick=async()=>{
+  if(!cur){return}
+  if(typeof html2canvas!=='function'||!window.fbSavePick){
+   stat.className='aostatus err';stat.textContent='Still loading — try again in a second.';return}
+  btn.disabled=true; stat.className='aostatus'; stat.textContent='Saving to the order…';
+  // Hide controls that should not appear in the saved picture.
+  const hide=['bk','addorder','aostatus'].map(id=>document.getElementById(id));
+  const vis=hide.map(el=>el?el.style.visibility:''); hide.forEach(el=>{if(el)el.style.visibility='hidden'});
+  try{
+   const canvas=await html2canvas(document.getElementById('detail'),
+     {backgroundColor:'#0f1115',scale:2,logging:false});
+   hide.forEach((el,i)=>{if(el)el.style.visibility=vis[i]});
+   let png=await shrink(trimCanvas(canvas).toDataURL('image/png'),900000);
+   const stc=stitchesOf(F[cur],lines(),ht,maxW);
+   await window.fbSavePick({
+    font:cur, text:lines().join(' / '),
+    height:ht, width:maxW,
+    thread:THREAD[th][0], garment:GARMENT[gm][0],
+    dim:(document.getElementById('dim').textContent||''),
+    price:(document.getElementById('amt').textContent||''),
+    stitches:stc||0, png:png
+   });
+   stat.className='aostatus ok'; stat.textContent='✓ Added — it will show on the kiosk order.';
+  }catch(e){
+   hide.forEach((el,i)=>{if(el)el.style.visibility=vis[i]});
+   stat.className='aostatus err'; stat.textContent='Could not save — check the internet and try again.';
+   console.log('addorder failed',e);
+  }
+  btn.disabled=false;
+ };
+})();
 </script></body></html>
